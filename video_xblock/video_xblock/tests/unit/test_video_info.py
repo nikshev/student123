@@ -20,7 +20,7 @@ from video_xblock.backends import bunny
 from video_xblock.bunny_config import DEFAULT_CONFIG_PATH
 from video_xblock.tests.fixtures.bunny.create_video import CREATE_VIDEO_200
 from video_xblock.tests.fixtures.bunny.delete_video import DELETE_VIDEO_200
-from video_xblock.tests.fixtures.bunny.video_info import VIDEO_INFO_STATUSES
+from video_xblock.tests.fixtures.bunny.video_info import VIDEO_INFO_404, VIDEO_INFO_STATUSES
 from video_xblock.tests.unit.base import arrange_request_mock
 from video_xblock.video_xblock import VideoXBlock
 
@@ -145,5 +145,86 @@ def test_video_info_accepts_ready_video_below_injected_duration_limit(polling):
     assert body["length"] == 612.5
     assert polling.xblock.metadata["bunny_status"] == "READY"
     assert polling.xblock.metadata["bunny_length_seconds"] == 612.5
+    polling.client.get_video_info.assert_called_once_with(polling.video_id)
+    polling.client.delete_video.assert_not_called()
+
+
+def test_video_info_unknown_status_fails_safe_to_error(polling):
+    """
+    Edge case (critical): an unrecognised Bunny status must not leave the block
+    in its previous state. The block is marked ERROR instead, so a teacher
+    cannot publish a video whose state the contract does not define.
+    """
+    polling.client.get_video_info.side_effect = lambda video_id: deepcopy({
+        "guid": polling.video_id, "status": 99, "length": None, "title": "Лекція 1",
+    })
+    polling.xblock.metadata["bunny_status"] = "PROCESSING"
+    player = bunny.BunnyPlayer(polling.xblock)
+    request = arrange_request_mock(json.dumps({"video_id": polling.video_id}))
+
+    response = player.video_info(request)
+
+    assert response.status_int == 200
+    assert polling.xblock.metadata["bunny_status"] == "ERROR"
+    assert polling.xblock.metadata.get("bunny_length_seconds") is None
+    polling.client.get_video_info.assert_called_once_with(polling.video_id)
+    polling.client.delete_video.assert_not_called()
+
+
+def test_video_info_duration_limit_is_pinned_golden(polling):
+    """
+    Golden-file (critical, constitution III): the duration limit is a versioned
+    constant from ``bunny_config.yaml``, never hard-coded.
+
+    The bundled config pins ``version: 1.0.1`` and ``max_duration_seconds:
+    1800``. The recorded READY video (612.5 s) is below that limit, so with the
+    canonical config in effect the handler must accept it as READY. If the
+    constant ever moves without a changelog bump, this test pins the drift.
+    """
+    from video_xblock.bunny_config import load_bunny_config
+
+    canonical = load_bunny_config(DEFAULT_CONFIG_PATH)
+    assert canonical["version"] == "1.0.1"
+    assert canonical["max_duration_seconds"] == 1800
+
+    with patch.object(bunny, "load_bunny_config", return_value=canonical):
+        polling.client.get_video_info.side_effect = lambda video_id: deepcopy(
+            VIDEO_INFO_STATUSES[4]["body"]
+        )
+        player = bunny.BunnyPlayer(polling.xblock)
+        request = arrange_request_mock(json.dumps({"video_id": polling.video_id}))
+
+        response = player.video_info(request)
+
+    assert response.status_int == 200
+    assert json.loads(response.body)["length"] == 612.5
+    assert polling.xblock.metadata["bunny_status"] == "READY"
+    assert polling.xblock.metadata["bunny_length_seconds"] == 612.5
+    polling.client.delete_video.assert_not_called()
+
+
+def test_video_info_404_marks_block_error_without_length(polling):
+    """
+    Edge case (critical): a 404 from Bunny (video deleted there, bunny-api.md
+    §3) must translate the block to fail-safe ERROR with the duration cleared
+    — not a 502 service error that leaves the stale metadata in place — and
+    must make no further network calls (in particular, no DELETE).
+    """
+    polling.client.get_video_info.side_effect = bunny.BunnyApiClientError(
+        VIDEO_INFO_404["body"]["message"],
+        status_code=VIDEO_INFO_404["status_code"],
+    )
+    # Start from a stale READY state so both the ERROR write-back and the
+    # duration clearing are observable.
+    polling.xblock.metadata["bunny_status"] = "READY"
+    polling.xblock.metadata["bunny_length_seconds"] = 612.5
+    player = bunny.BunnyPlayer(polling.xblock)
+    request = arrange_request_mock(json.dumps({"video_id": polling.video_id}))
+
+    response = player.video_info(request)
+
+    assert response.status_int == 200
+    assert polling.xblock.metadata["bunny_status"] == "ERROR"
+    assert polling.xblock.metadata.get("bunny_length_seconds") is None
     polling.client.get_video_info.assert_called_once_with(polling.video_id)
     polling.client.delete_video.assert_not_called()

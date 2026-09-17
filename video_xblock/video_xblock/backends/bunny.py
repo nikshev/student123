@@ -413,3 +413,87 @@ class BunnyPlayer(BaseVideoPlayer):
             'authorization_signature': signature['authorization_signature'],
             'authorization_expire': signature['authorization_expire'],
         }
+
+    @XBlock.json_handler
+    def video_info(self, data, suffix=''):  # pylint: disable=unused-argument
+        """
+        Poll the Bunny video status and persist the mapped state (contract §2.3).
+
+        A polling proxy for ``BunnyApiClient.get_video_info`` (bunny-api.md §3):
+        it maps the raw Bunny status to the XBlock state through the explicit
+        ``map_bunny_status`` function and writes the result into the block
+        metadata, so the Studio tab reflects it without a page reload
+        (FR-001-05). ``length`` is surfaced only for a finished (READY) video.
+
+        Fail-safety (critical): a silent mapping/duration mistake would leave
+        the block in a wrong state and let a teacher publish an unready video.
+        Therefore an unknown status is mapped to ERROR — never left in the
+        previous state — a 404 (video deleted in Bunny) marks the block ERROR
+        with its duration cleared, and a READY video whose ``length`` exceeds
+        ``max_duration_seconds`` (from the versioned YAML, constitution III) is
+        deleted via the client and marked ERROR (research R4).
+        """
+        config = load_bunny_config(DEFAULT_CONFIG_PATH)
+        video_id = data.get('video_id') if isinstance(data, dict) else None
+        if not isinstance(video_id, str) or not video_id:
+            raise JsonHandlerError(400, _(
+                'Вкажіть video_id відео для опитування стану.'
+            ))
+
+        client = BunnyApiClient.from_settings(config)
+        try:
+            info = client.get_video_info(video_id)
+        except BunnyApiClientError as exc:
+            if exc.status_code == 404:
+                # Video deleted in Bunny (bunny-api.md §3): fail-safe ERROR
+                # with the duration cleared, so the block never lingers in a
+                # stale state a teacher might publish. No further Bunny calls
+                # (no DELETE) are made for an already-gone video.
+                self.xblock.metadata.update({
+                    'bunny_status': 'ERROR',
+                    'bunny_length_seconds': None,
+                })
+                return {'status': None}
+            raise JsonHandlerError(502, VIDEO_SERVICE_ERROR_MESSAGE) from exc
+        except ApiClientError as exc:
+            raise JsonHandlerError(502, VIDEO_SERVICE_ERROR_MESSAGE) from exc
+
+        status = info.get('status')
+        # Fail-safe: an unrecognised status is a contract violation, not a
+        # value to guess at; the block is marked ERROR rather than kept in a
+        # stale state the teacher might publish.
+        try:
+            state = map_bunny_status(status)
+        except BunnyApiClientError:
+            state = 'ERROR'
+
+        length = None
+        if state == 'READY':
+            length = info.get('length')
+            if isinstance(length, bool) or not isinstance(length, (int, float)):
+                # A Finished video must carry a numeric duration (bunny-api §3).
+                # A missing/invalid duration is a contract violation: fail-safe
+                # to ERROR instead of publishing a video without a duration.
+                state = 'ERROR'
+                length = None
+            elif length > config['max_duration_seconds']:
+                # Over the versioned duration limit: ERROR + DELETE (research R4).
+                self.xblock.metadata.update({
+                    'bunny_status': 'ERROR',
+                    'bunny_length_seconds': None,
+                })
+                client.delete_video(video_id)
+                raise JsonHandlerError(400, _(
+                    'Відео довше за максимально допустиму тривалість '
+                    '({limit} секунд) і було видалене.'
+                ).format(limit=config['max_duration_seconds']))
+
+        self.xblock.metadata.update({
+            'bunny_status': state,
+            'bunny_length_seconds': length,
+        })
+
+        response = {'status': status}
+        if state == 'READY':
+            response['length'] = length
+        return response
