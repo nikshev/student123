@@ -16,7 +16,7 @@
 
 ## Phase 1: Setup
 
-- [ ] T-001 [FR-001-01] Завендорити форк `raccoongang/xblock-video` (master) у `video_xblock/` зі збереженням `video_xblock/LICENSE` (GPL-3.0, research R13), без змін коду; переконатися, що пакет імпортується (`python3 -c "import video_xblock"`).
+- [x] T-001 [FR-001-01] Завендорити форк `raccoongang/xblock-video` (master) у `video_xblock/` зі збереженням `video_xblock/LICENSE` (GPL-3.0, research R13), без змін коду; переконатися, що пакет імпортується (`python3 -c "import video_xblock"`).
 - [ ] T-002 [FR-001-01] Запустити наявний тестовий набір форка (pytest у `video_xblock/tests/`) і переконатися, що базовий рівень зелений — це база для червоних тестів наступних фаз.
 - [ ] T-003 [FR-001-07] Створити каркас `tutor-plugin/plugin.yml` і `tutor-plugin/patches/`: XBlock у вимоги образу edx-platform, CSP LMS `frame-src https://player.mediadelivery.net`, `Referrer-Policy` для iframe, секрети `BUNNY_STREAM_LIBRARY_ID` / `BUNNY_STREAM_API_KEY` / `BUNNY_STREAM_TOKEN_KEY` через tutor secrets (quickstart S0, plan Constraints).
 
