@@ -216,6 +216,57 @@ def test_transport_error_raises_api_client_error(
     assert str(excinfo.value) == bunny.VIDEO_SERVICE_ERROR_MESSAGE
 
 
+# --- transport isolation (constitution IV) ---------------------------------
+
+def test_client_ignores_global_monkeypatch_of_module_requests(bunny_config, transport):
+    """
+    Regression (T-007 artifact, constitution IV): the client owns its transport
+    through its own ``requests.Session``, so a leaked global monkeypatch of the
+    module-level ``requests.get`` must not affect it.
+
+    ``RequestsMock.apply_mock`` (test_backends.py) replaces ``requests.get``
+    with a lambda and does not reliably restore it; the client used to call
+    ``requests.get`` directly, so 9 tests here died with TypeError after that
+    run. Both ``create_video`` (POST) and ``get_video_info`` (GET) must go
+    through the recorded Session.request mock instead.
+    """
+    client = _client(bunny_config)
+    transport.side_effect = None
+    transport.return_value = _response(CREATE_VIDEO_200)
+
+    original_get = requests.get
+    stub = lambda *args, **kwargs: (_ for _ in ()).throw(  # noqa: E731
+        AssertionError("module-level requests.get should not be used")
+    )
+
+    with patch.object(requests, "get", stub):
+        # create_video issues POST via the client's own session, not requests.post/get.
+        result = client.create_video("Лекція 1")
+        assert result["guid"] == CREATE_VIDEO_200["body"]["guid"]
+        _assert_request(
+            transport, "POST",
+            "{}/library/{}/videos".format(bunny_config["api_base_url"], LIBRARY_ID),
+            {"title": "Лекція 1"},
+        )
+
+    # get_video_info issues GET via the client's own session, not requests.get.
+    transport.reset_mock()
+    transport.side_effect = None
+    transport.return_value = _response(VIDEO_INFO_STATUSES[4])
+    with patch.object(requests, "get", stub):
+        info = client.get_video_info(VIDEO_ID)
+        assert info["status"] == 4
+        _assert_request(
+            transport, "GET",
+            "{}/library/{}/videos/{}".format(
+                bunny_config["api_base_url"], LIBRARY_ID, VIDEO_ID,
+            ),
+        )
+
+    # The monkeypatch is restored once the patch context manager exits.
+    assert requests.get is original_get
+
+
 # --- get_video_info (bunny-api.md §3) --------------------------------------
 
 @pytest.mark.parametrize("status", [0, 1, 2, 3, 4, 5, 6])

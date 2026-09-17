@@ -116,6 +116,10 @@ class BunnyApiClient(BaseApiClient):
         self.embed_base_url = embed_base_url.rstrip("/")
         self.token_ttl_seconds = token_ttl_seconds
         self.upload_auth_ttl_seconds = upload_auth_ttl_seconds
+        # The client owns its transport: a dedicated Session isolates it from
+        # any global monkeypatch of the module-level requests.get/post/delete
+        # helpers (constitution IV).
+        self._session = requests.Session()
 
     @classmethod
     def from_settings(cls, config):
@@ -175,7 +179,7 @@ class BunnyApiClient(BaseApiClient):
         if headers:
             headers_.update(headers)
         try:
-            response = requests.get(url, headers=headers_)
+            response = self._session.get(url, headers=headers_)
         except requests.exceptions.RequestException:
             raise BunnyApiClientError(VIDEO_SERVICE_ERROR_MESSAGE)
         if not 200 <= response.status_code < 300:
@@ -193,7 +197,7 @@ class BunnyApiClient(BaseApiClient):
         if headers:
             headers_.update(headers)
         try:
-            response = requests.post(url, json=payload, headers=headers_)
+            response = self._session.post(url, json=payload, headers=headers_)
         except requests.exceptions.RequestException:
             raise BunnyApiClientError(VIDEO_SERVICE_ERROR_MESSAGE)
         if not 200 <= response.status_code < 300:
@@ -211,7 +215,7 @@ class BunnyApiClient(BaseApiClient):
         if headers:
             headers_.update(headers)
         try:
-            response = requests.delete(url, headers=headers_)
+            response = self._session.delete(url, headers=headers_)
         except requests.exceptions.RequestException:
             raise BunnyApiClientError(VIDEO_SERVICE_ERROR_MESSAGE)
         if not 200 <= response.status_code < 300:
