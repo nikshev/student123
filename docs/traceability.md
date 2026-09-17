@@ -2,7 +2,7 @@
 
 <!-- ГЕНЕРУЄТЬСЯ scripts/trace.py — не редагувати вручну -->
 
-Вимог: **16** · задач: **39** (виконано 6) · вимог у роботі: **16** · порушень: **0**
+Вимог: **16** · задач: **39** (виконано 7) · вимог у роботі: **16** · порушень: **0**
 
 ## 001-bunny-video
 
@@ -12,11 +12,11 @@
 | `FR-001-02` | Система MUST приймати відеофайли формату MP4, MOV і WebM; для непідтримуваного файла вчитель MUST бачити зрозу | `T-004`, `T-005`, `T-008`, `T-009`, `T-018`, `T-019` | `video_xblock/video_xblock/bunny_config.yaml`, `video_xblock/video_xblock/bunny_config.py` | `video_xblock/video_xblock/tests/unit/test_bunny_config.py` |
 | `FR-001-03` | Завантаження MUST бути стійким до обриву мережі: повторна спроба того самого файла продовжується з місця обрив | `T-012`, `T-013`, `T-018`, `T-019` | — | — |
 | `FR-001-04` | Система MUST відхиляти файли понад встановлений ліміт розміру до початку передавання з поясненням ліміту. | `T-004`, `T-005`, `T-010`, `T-011`, `T-018`, `T-019` | `video_xblock/video_xblock/bunny_config.yaml`, `video_xblock/video_xblock/bunny_config.py` | `video_xblock/video_xblock/tests/unit/test_bunny_config.py` |
-| `FR-001-05` | Після завершення завантаження відео MUST бути доступним для публікації в юніті без додаткових дій вчителя, і в | `T-006`, `T-007`, `T-014`, `T-015` | — | `video_xblock/video_xblock/tests/unit/test_bunny_api_client.py` |
+| `FR-001-05` | Після завершення завантаження відео MUST бути доступним для публікації в юніті без додаткових дій вчителя, і в | `T-006`, `T-007`, `T-014`, `T-015` | `video_xblock/video_xblock/backends/bunny.py` | `video_xblock/video_xblock/tests/unit/test_bunny_api_client.py` |
 | `FR-001-06` | Відео MUST зберігатися поза сервером платформи; на сервері лишаються лише метадані та посилання. | `T-020`, `T-021` | — | — |
 | `FR-001-07` | Учень, зарахований на курс, MUST мати змогу відтворити відео в плеєрі юніту без переходу на сторонні сайти. | `T-003`, `T-026`, `T-027` | `tutor-plugin/plugin.yml` | — |
 | `FR-001-08` | Учень, не зарахований на курс, MUST NOT мати доступу до відео юніту. | `T-028`, `T-029` | — | — |
-| `FR-001-09` | Посилання на захищене відео MUST бути підписане токеном з обмеженим терміном дії; після спливу терміну доступ  | `T-004`, `T-005`, `T-006`, `T-007`, `T-012`, `T-013`, `T-024`, `T-025` | `video_xblock/video_xblock/bunny_config.yaml`, `video_xblock/video_xblock/bunny_config.py` | `video_xblock/video_xblock/tests/unit/test_bunny_config.py`, `video_xblock/video_xblock/tests/unit/test_bunny_api_client.py` |
+| `FR-001-09` | Посилання на захищене відео MUST бути підписане токеном з обмеженим терміном дії; після спливу терміну доступ  | `T-004`, `T-005`, `T-006`, `T-007`, `T-012`, `T-013`, `T-024`, `T-025` | `video_xblock/video_xblock/bunny_config.yaml`, `video_xblock/video_xblock/bunny_config.py`, `video_xblock/video_xblock/backends/bunny.py` | `video_xblock/video_xblock/tests/unit/test_bunny_config.py`, `video_xblock/video_xblock/tests/unit/test_bunny_api_client.py`, `video_xblock/video_xblock/tests/unit/test_bunny_api_client_signing.py` |
 | `FR-001-10` | Якщо відео недоступне (видалене, помилка відтворення), учень MUST бачити зрозуміле повідомлення про недоступні | `T-030`, `T-031` | — | — |
 | `FR-001-11` | Вчитель MUST мати змогу вставити відео за готовим посиланням YouTube або Vimeo; таке відео відтворюється в пле | `T-036`, `T-037`, `T-039` | — | — |
 | `FR-001-12` | Плеєр MUST фіксувати події перегляду: початок відтворення, пауза/продовження, повний перегляд. | `T-034`, `T-035` | — | — |
@@ -27,7 +27,7 @@
 
 ## Критичні задачі
 
-- `T-007` (001-bunny-video) — у роботі
+- `T-007` (001-bunny-video) — виконано
 - `T-013` (001-bunny-video) — у роботі
 - `T-015` (001-bunny-video) — у роботі
 - `T-025` (001-bunny-video) — у роботі

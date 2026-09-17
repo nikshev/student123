@@ -123,8 +123,10 @@ def _client(config, **overrides):
         "api_key": API_KEY,
         "token_security_key": TOKEN_SECURITY_KEY,
         "api_base_url": config["api_base_url"],
+        "tus_endpoint": config["tus_endpoint"],
         "embed_base_url": config["embed_base_url"],
         "token_ttl_seconds": config["token_ttl_seconds"],
+        "upload_auth_ttl_seconds": config["upload_auth_ttl_seconds"],
     }
     params.update(overrides)
     return bunny.BunnyApiClient(**params)
@@ -168,18 +170,50 @@ def test_create_video_returns_guid(bunny_config, transport):
 
 def test_create_video_401_raises(bunny_config, transport):
     """
-    An invalid AccessKey/library (401) raises an ApiClientError.
+    An invalid AccessKey/library (401) raises an ApiClientError with the
+    friendly Ukrainian message (bunny-api.md §1), never the raw English
+    API response.
     """
+    from video_xblock.backends import bunny  # noqa: PLC0415
+
     client = _client(bunny_config)
     transport.side_effect = None
     transport.return_value = _response(CREATE_VIDEO_401)
-    with pytest.raises(ApiClientError):
+    with pytest.raises(ApiClientError) as excinfo:
         client.create_video("Лекція 1")
+    assert excinfo.value.status_code == 401
+    assert str(excinfo.value) == bunny.VIDEO_SERVICE_ERROR_MESSAGE
+    assert "Unauthorized" not in str(excinfo.value)
     _assert_request(
         transport, "POST",
         "{}/library/{}/videos".format(bunny_config["api_base_url"], LIBRARY_ID),
         {"title": "Лекція 1"},
     )
+
+
+@pytest.mark.parametrize(
+    "operation,args",
+    [
+        ("get_video_info", (VIDEO_ID,)),
+        ("create_video", ("Лекція 1",)),
+        ("delete_video", (VIDEO_ID,)),
+    ],
+)
+def test_transport_error_raises_api_client_error(
+    operation, args, bunny_config, transport
+):
+    """
+    A transport-level failure (Bunny unreachable) is converted to the single
+    ApiClientError model with the friendly message, never a raw ``requests``
+    exception (constitution IV, bunny-api.md §1).
+    """
+    from video_xblock.backends import bunny  # noqa: PLC0415
+
+    client = _client(bunny_config)
+    transport.side_effect = requests.exceptions.RequestException("Connection error")
+    with pytest.raises(ApiClientError) as excinfo:
+        getattr(client, operation)(*args)
+    assert str(excinfo.value) == bunny.VIDEO_SERVICE_ERROR_MESSAGE
 
 
 # --- get_video_info (bunny-api.md §3) --------------------------------------
