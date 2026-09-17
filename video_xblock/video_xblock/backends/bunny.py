@@ -1,3 +1,4 @@
+# impl: FR-001-04
 # impl: FR-001-02, FR-001-05, FR-001-09
 """
 Bunny Stream API client.
@@ -334,6 +335,18 @@ class BunnyPlayer(BaseVideoPlayer):
             raise JsonHandlerError(400, _(
                 'Непідтримуваний тип файла. Оберіть відеофайл (MIME video/*).'
             ))
+
+        # Recheck the declared size against YAML before contacting Bunny (R4).
+        file_size = data.get('file_size')
+        if not isinstance(file_size, int) or isinstance(file_size, bool):
+            raise JsonHandlerError(400, _(
+                'Вкажіть розмір файла (file_size) цілим числом байтів.'
+            ))
+        max_upload_bytes = config['max_upload_bytes']
+        if file_size > max_upload_bytes:
+            raise JsonHandlerError(400, _(
+                'Розмір файла перевищує ліміт {limit} байт (максимум).'
+            ).format(limit=max_upload_bytes))
 
         client = BunnyApiClient.from_settings(config)
         try:
