@@ -102,3 +102,37 @@ class UploadCredentialsTests(unittest.TestCase):
         self.assertEqual(bodies[0]["video_id"], bodies[1]["video_id"])
         self.assertNotEqual(bodies[0]["authorization_signature"], bodies[1]["authorization_signature"])
         self.assertGreater(bodies[1]["authorization_expire"], bodies[0]["authorization_expire"])
+
+    def _assert_foreign_rejected(self, response):
+        """Rejected with a clear 400 and no signing call (ownership check)."""
+        self.assertEqual(response.status_int, 400)
+        body = json.loads(response.body)
+        message = body.get("error", body.get("message", ""))
+        self.assertIsInstance(message, str)
+        self.assertRegex(
+            message.lower(),
+            r"block|блок|video|відео|належ|збіга|відповід|власн",
+        )
+        self.client.sign_upload.assert_not_called()
+
+    def test_rejects_foreign_video_id_without_signing(self):
+        # A valid-looking GUID that is not this block's bunny_video_id must be
+        # refused: resume may only re-sign the block's own video (FR-001-03).
+        player = bunny.BunnyPlayer(self.xblock)
+        request = arrange_request_mock(json.dumps({
+            "video_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+        }))
+        response = player.upload_credentials(request)
+        self._assert_foreign_rejected(response)
+
+    def test_rejects_block_without_bunny_video_id(self):
+        # A block that has no bunny_video_id has nothing to resume (FR-001-03).
+        xblock = VideoXBlock(
+            TestRuntime(),
+            DictFieldData({"account_id": "account_id", "metadata": {}}),
+            scope_ids=Mock(spec=[]),
+        )
+        player = bunny.BunnyPlayer(xblock)
+        request = arrange_request_mock(json.dumps({"video_id": self.video_id}))
+        response = player.upload_credentials(request)
+        self._assert_foreign_rejected(response)

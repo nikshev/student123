@@ -2,7 +2,7 @@
 
 <!-- ГЕНЕРУЄТЬСЯ scripts/trace.py — не редагувати вручну -->
 
-Вимог: **16** · задач: **39** (виконано 12) · вимог у роботі: **16** · порушень: **0**
+Вимог: **16** · задач: **39** (виконано 13) · вимог у роботі: **16** · порушень: **0**
 
 ## 001-bunny-video
 
@@ -10,7 +10,7 @@
 |---|---|---|---|---|
 | `FR-001-01` | Вчитель-автор MUST мати змогу завантажити відеофайл у юніт курсу через редактор (Studio) без сторонніх інструм | `T-001`, `T-002`, `T-016`, `T-017`, `T-038` | `video_xblock/py312-stubs/setup.py`, `video_xblock/py312-stubs/py312_compat/__init__.py`, `video_xblock/py312-stubs/openedx/core/djangoapps/site_configuration/helpers.py`, `video_xblock/py312-stubs/openedx/core/djangoapps/contentserver/middleware.py`, `video_xblock/py312-stubs/common/djangoapps/util/date_utils.py`, `video_xblock/py312-stubs/xmodule/contentstore/django.py`, `video_xblock/py312-stubs/xmodule/contentstore/content.py` | `video_xblock/video_xblock/tests/unit/test_backends.py`, `video_xblock/video_xblock/tests/unit/test_mixins.py` |
 | `FR-001-02` | Система MUST приймати відеофайли формату MP4, MOV і WebM; для непідтримуваного файла вчитель MUST бачити зрозу | `T-004`, `T-005`, `T-008`, `T-009`, `T-018`, `T-019` | `video_xblock/video_xblock/bunny_config.yaml`, `video_xblock/video_xblock/bunny_config.py`, `video_xblock/video_xblock/backends/bunny.py` | `video_xblock/video_xblock/tests/unit/test_bunny_config.py`, `video_xblock/video_xblock/tests/unit/test_create_upload.py` |
-| `FR-001-03` | Завантаження MUST бути стійким до обриву мережі: повторна спроба того самого файла продовжується з місця обрив | `T-012`, `T-013`, `T-018`, `T-019` | — | `video_xblock/video_xblock/tests/unit/test_upload_credentials.py` |
+| `FR-001-03` | Завантаження MUST бути стійким до обриву мережі: повторна спроба того самого файла продовжується з місця обрив | `T-012`, `T-013`, `T-018`, `T-019` | `video_xblock/video_xblock/backends/bunny.py` | `video_xblock/video_xblock/tests/unit/test_upload_credentials.py` |
 | `FR-001-04` | Система MUST відхиляти файли понад встановлений ліміт розміру до початку передавання з поясненням ліміту. | `T-004`, `T-005`, `T-010`, `T-011`, `T-018`, `T-019` | `video_xblock/video_xblock/bunny_config.yaml`, `video_xblock/video_xblock/bunny_config.py`, `video_xblock/video_xblock/backends/bunny.py` | `video_xblock/video_xblock/tests/unit/test_bunny_config.py`, `video_xblock/video_xblock/tests/unit/test_upload_limits.py` |
 | `FR-001-05` | Після завершення завантаження відео MUST бути доступним для публікації в юніті без додаткових дій вчителя, і в | `T-006`, `T-007`, `T-014`, `T-015` | `video_xblock/video_xblock/backends/bunny.py` | `video_xblock/video_xblock/tests/unit/test_bunny_api_client.py` |
 | `FR-001-06` | Відео MUST зберігатися поза сервером платформи; на сервері лишаються лише метадані та посилання. | `T-020`, `T-021` | — | — |
@@ -28,7 +28,7 @@
 ## Критичні задачі
 
 - `T-007` (001-bunny-video) — виконано
-- `T-013` (001-bunny-video) — у роботі
+- `T-013` (001-bunny-video) — виконано
 - `T-015` (001-bunny-video) — у роботі
 - `T-025` (001-bunny-video) — у роботі
 - `T-033` (001-bunny-video) — у роботі

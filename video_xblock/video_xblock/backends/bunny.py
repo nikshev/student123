@@ -1,5 +1,6 @@
 # impl: FR-001-04
 # impl: FR-001-02, FR-001-05, FR-001-09
+# impl: FR-001-03, FR-001-09
 """
 Bunny Stream API client.
 
@@ -366,6 +367,47 @@ class BunnyPlayer(BaseVideoPlayer):
         })
         return {
             'video_id': created['guid'],
+            'library_id': client.library_id,
+            'tus_endpoint': config['tus_endpoint'],
+            'authorization_signature': signature['authorization_signature'],
+            'authorization_expire': signature['authorization_expire'],
+        }
+
+    @XBlock.json_handler
+    def upload_credentials(self, data, suffix=''):  # pylint: disable=unused-argument
+        """
+        Re-sign the same video id for a TUS resume (contract §2.2, research R6).
+
+        An interrupted upload is resumed by re-signing the existing ``video_id``
+        — never by creating a replacement object (FR-001-03). The signature is
+        produced by ``BunnyApiClient.sign_upload``, the single owner of the R6
+        TUS formula; its TTL comes from ``upload_auth_ttl_seconds`` in the
+        versioned ``bunny_config.yaml`` and is never hard-coded here
+        (constitution III).
+        """
+        config = load_bunny_config(DEFAULT_CONFIG_PATH)
+        video_id = data.get('video_id') if isinstance(data, dict) else None
+        if not isinstance(video_id, str) or not video_id:
+            raise JsonHandlerError(400, _(
+                'Вкажіть video_id відео для повторного підпису.'
+            ))
+
+        # Resume may only re-sign this block's own video: the submitted
+        # ``video_id`` must equal the stored ``bunny_video_id`` (FR-001-03).
+        # A block that has no GUID, or a caller-supplied foreign id, is
+        # rejected before any signature is produced.
+        stored_video_id = self.xblock.metadata.get('bunny_video_id')
+        if stored_video_id != video_id:
+            raise JsonHandlerError(400, _(
+                'Вказаний video_id не належить цьому блоку. '
+                'Повторний підпис можливий лише для власного відео блоку.'
+            ))
+
+        client = BunnyApiClient.from_settings(config)
+        signature = client.sign_upload(video_id)
+
+        return {
+            'video_id': video_id,
             'library_id': client.library_id,
             'tus_endpoint': config['tus_endpoint'],
             'authorization_signature': signature['authorization_signature'],
