@@ -1,7 +1,7 @@
 ---
 name: architect
 description: Архітектор фічі: plan.md, data-model.md, contracts/ і декомпозиція на задачі після затвердження spec.md. Не пише імплементаційний код.
-mode: subagent
+mode: all
 model: openrouter/openai/gpt-5.6-sol
 ---
 

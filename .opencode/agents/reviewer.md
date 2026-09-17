@@ -1,7 +1,7 @@
 ---
 name: reviewer
 description: Read-only ревʼю виконаної задачі або фічі проти FR-ID і конституції; повертає APPROVED або CHANGES_REQUESTED.
-mode: subagent
+mode: all
 model: openrouter/openai/gpt-5.6-sol
 permission:
   edit: deny

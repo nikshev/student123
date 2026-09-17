@@ -1,7 +1,7 @@
 ---
 name: implementer-senior
 description: Старший виконавець critical-задач і задач після BLOCKED або двох CHANGES_REQUESTED; отримує лог попередніх спроб.
-mode: subagent
+mode: all
 model: deepseek/deepseek-v4-pro
 ---
 

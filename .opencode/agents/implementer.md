@@ -1,7 +1,7 @@
 ---
 name: implementer
 description: Виконавець рівно однієї звичайної задачі T-xxx за TDD. Для critical-задач або після ескалації використовуй implementer-senior.
-mode: subagent
+mode: all
 model: openrouter/stealth/union-alpha
 ---
 
