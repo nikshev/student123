@@ -1,6 +1,7 @@
 """
 VideoXBlock mixins test cases.
 """
+# verifies: FR-001-01
 
 import json
 from collections import Iterable
@@ -467,25 +468,28 @@ class TranscriptsMixinTests(VideoXBlockTestBase):  # pylint: disable=test-inheri
         self.assertIsInstance(response_text, str)
         self.assertEqual(response_text, 'vtt_content is string data type')        
 
-    @patch('video_xblock.mixins.requests', new_callable=MagicMock)
+    @patch('video_xblock.mixins.StaticContentServer')
     @patch.object(VideoXBlock, 'convert_caps_to_vtt')
-    def test_srt_to_vtt(self, convert_caps_to_vtt_mock, requests_mock):
+    def test_srt_to_vtt(self, convert_caps_to_vtt_mock, static_content_server_mock):
         """
         Test xBlock's srt-to-vtt convertation works properly.
         """
         # Arrange
         request_mock = MagicMock()
+        request_mock.query_string = 'test-trans.srt'
+        load_mock = static_content_server_mock.return_value.load_asset_from_location
+        load_mock.return_value.stream_data.return_value = [b'test caps']
         convert_caps_to_vtt_mock.return_value = 'vtt transcripts'
-        requests_mock.get.return_value.text = text_mock = PropertyMock()
-        text_mock.return_value = 'vtt transcripts'
 
         # Act
         vtt_response = self.xblock.srt_to_vtt(request_mock, 'unused suffix')
 
         # Assert
+        static_content_server_mock.assert_called_once_with()
+        load_mock.assert_called_once_with('test-trans.srt')
+        convert_caps_to_vtt_mock.assert_called_once_with('test caps')
         self.assertIsInstance(vtt_response, Response)
         self.assertEqual(vtt_response.text, 'vtt transcripts')
-        convert_caps_to_vtt_mock.assert_called_once_with(text_mock)
 
     def test_fetch_available_3pm_transcripts_with_errors(self):
         """

@@ -1,0 +1,54 @@
+# Python 3.12-compatible dependency set for the vendored video_xblock unit
+# suite (video_xblock/tests/unit/).  Created for T-002 [FR-001-01].
+#
+# The fork's own requirements.txt / test_requirements.txt pin Django==2.2,
+# xblock-sdk 0.3.0 from git etc., which do not work on Python 3.12.
+# This file replaces them for the standalone unit-test environment.
+#
+# Rebuild steps (from repo root, /opt/student123):
+#
+#   python3 -m venv .venv
+#   .venv/bin/pip install -U pip
+#   .venv/bin/pip install "setuptools<81"          # XBlock 4.0.1 needs pkg_resources
+#   .venv/bin/pip install -r video_xblock/requirements-py312.txt
+#   .venv/bin/pip install --no-deps -e video_xblock/
+#                                                  # registers video_xblock.v1 entry
+#                                                  # points (players: dummy/html5/...)
+#   .venv/bin/pip install --no-deps video_xblock/py312-stubs/
+#                                                  # edx-platform import stubs
+#                                                  # (common/openedx/xmodule)
+#   cp video_xblock/py312-stubs/py312_compat.pth .venv/lib/python3.12/site-packages/
+#                                                  # auto-loads py312_compat shim
+#                                                  # (collections ABC aliases +
+#                                                  #  unittest aliases removed in py3.12)
+#
+# Run (from video_xblock/):
+#
+#   cd video_xblock
+#   DJANGO_SETTINGS_MODULE=video_xblock.settings_test \
+#       ../.venv/bin/python -m pytest video_xblock/tests/unit/ -q
+#
+# Expected result: 154 passed, 1 skipped, 0 failed.
+# The 2 fork-internal code-vs-test mismatches at vendored HEAD
+# (raccoongang/xblock-video @9a6f808) were aligned test-side in T-002, with
+# no fork production code touched:
+#   * test_backends.py::TestCustomBackends::test_transcripts_fields[html5]
+#   * test_mixins.py::TranscriptsMixinTests::test_srt_to_vtt
+# See py312-stubs/README.md and the T-002 report for details.
+
+# --- direct pins ---------------------------------------------------------
+Django==4.2.30          # 4.2 LTS; 2.2 does not run on py3.12
+XBlock==4.0.1           # satisfies fork pin Xblock>=4.0.1,<5.0.0; from PyPI
+edx-opaque-keys==4.0.0  # provides opaque_keys.edx.keys (video_xblock.py:22)
+ddt==1.7.2
+mock==5.2.0
+babelfish==0.5.5        # fork pin: >=0.5.5,<0.6.0 (reverted from 0.6.0 at HEAD)
+lxml==6.1.3
+pycaption==2.1.0        # fork pin
+pytest==9.1.1
+setuptools<81           # pkg_resources was removed in setuptools 81+
+
+# --- transitive (installed automatically; exact working versions) --------
+requests==2.34.2
+web-fragments==4.0.0
+WebOb==1.8.11

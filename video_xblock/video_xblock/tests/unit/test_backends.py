@@ -1,6 +1,7 @@
 """
 Test cases for video_xblock backends.
 """
+# verifies: FR-001-01
 import unittest
 from urllib import parse
 
@@ -203,7 +204,7 @@ class TestCustomBackends(VideoXBlockTestBase):
         ['transcripts', 'default_transcripts', 'token'],
         ['transcripts', 'default_transcripts', 'token'],
         ['transcripts', 'default_transcripts', 'token'],
-        ['transcripts', 'default_transcripts'],
+        ['transcripts'],
     ]
 
     @data(*zip(backends, expected_trans_fields, expected_3pm_fields))
