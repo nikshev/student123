@@ -95,8 +95,8 @@ escalated: T-034 implementer->implementer-senior, reason=<коротка при�
 Обовʼязкові, інакше `trace.py` червоний:
 
 ```python
-# impl: FR-003-07          у шапці файла-імплементації
-# verifies: FR-003-07      у тесті
+# impl: FR-NNN-MM          у шапці файла-імплементації
+# verifies: FR-NNN-MM      у тесті
 ```
 
 Маркери шукаються тільки в коді (`.rs .py .toml .yaml .yml .sql .sh .ipynb`).
