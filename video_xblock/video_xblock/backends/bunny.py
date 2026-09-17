@@ -1,4 +1,4 @@
-# impl: FR-001-05, FR-001-09
+# impl: FR-001-02, FR-001-05, FR-001-09
 """
 Bunny Stream API client.
 
@@ -23,12 +23,16 @@ R6:
 """
 
 import hashlib
+import os
 import time
 
 import requests
 from django.conf import settings
+from xblock.core import XBlock
+from xblock.exceptions import JsonHandlerError
 
-from video_xblock.backends.base import BaseApiClient
+from video_xblock.backends.base import BaseApiClient, BaseVideoPlayer
+from video_xblock.bunny_config import DEFAULT_CONFIG_PATH, load_bunny_config
 from video_xblock.exceptions import ApiClientError
 from video_xblock.utils import ugettext as _
 
@@ -301,3 +305,52 @@ class BunnyApiClient(BaseApiClient):
         return "{}/embed/{}/{}?token={}&expires={}".format(
             self.embed_base_url, self.library_id, video_id, token, expires
         )
+
+
+class BunnyPlayer(BaseVideoPlayer):
+    """Bunny backend: create an upload and store its metadata."""
+
+    url_re = []
+
+    @XBlock.json_handler
+    def create_upload(self, data, suffix=''):  # pylint: disable=unused-argument
+        """Validate the format before creating a video (contract §2.1)."""
+        config = load_bunny_config(DEFAULT_CONFIG_PATH)
+        file_name = data.get('file_name') if isinstance(data, dict) else None
+        file_type = data.get('file_type') if isinstance(data, dict) else None
+        extension = (
+            os.path.splitext(file_name)[1][1:].lower()
+            if isinstance(file_name, str) else ''
+        )
+        if extension not in config['allowed_extensions']:
+            raise JsonHandlerError(400, _(
+                'Непідтримуваний формат файла. Дозволені формати: {formats}.'
+            ).format(formats=', '.join(config['allowed_extensions'])))
+        if not isinstance(file_type, str) or not file_type.startswith('video/'):
+            raise JsonHandlerError(400, _(
+                'Непідтримуваний тип файла. Оберіть відеофайл (MIME video/*).'
+            ))
+
+        client = BunnyApiClient.from_settings(config)
+        try:
+            created = client.create_video(file_name)
+            signature = client.sign_upload(created['guid'])
+        except ApiClientError as exc:
+            raise JsonHandlerError(502, VIDEO_SERVICE_ERROR_MESSAGE) from exc
+
+        self.xblock.metadata.update({
+            'bunny_video_id': created['guid'],
+            'bunny_library_id': client.library_id,
+            'bunny_status': 'UPLOADING',
+            'bunny_title': file_name,
+            'source_type': 'bunny',
+            'token_protected': True,
+            'config_version': config['version'],
+        })
+        return {
+            'video_id': created['guid'],
+            'library_id': client.library_id,
+            'tus_endpoint': config['tus_endpoint'],
+            'authorization_signature': signature['authorization_signature'],
+            'authorization_expire': signature['authorization_expire'],
+        }
