@@ -1,0 +1,12 @@
+{
+  "name": "bunny-upload-tests",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {
+    "jest": "29.7.0",
+    "yaml": "2.9.1"
+  }
+}
