@@ -3,7 +3,7 @@
 # Поведінкові константи XBlock «Відео» (Bunny Stream).
 # Зміна будь-якого значення ВИМАГАЄ запису в changelog і підйому version.
 
-version: 1.0.0
+version: 1.0.1
 
 token_ttl_seconds: 86400            # FR-001-09, SC-003: термін дії токена плеєра
 completion_threshold: 0.95          # FR-001-14: поріг повного перегляду
@@ -18,7 +18,11 @@ tus_endpoint: https://video.bunnycdn.com/tusupload
 embed_base_url: https://player.mediadelivery.net
 
 changelog:
+  - version: 1.0.1
+    date: '2026-09-17'
+    changes:
+      - "Виправлено: дату в changelog заквотовано (date: '2026-09-17'), щоб yaml.safe_load не парсив її як datetime.date; load_bunny_config(DEFAULT_CONFIG_PATH) більше не падає з ValueError"
   - version: 1.0.0
-    date: 2026-09-17
+    date: '2026-09-17'
     changes:
       - "Початкові значення: TTL 24 год (spec Assumptions), поріг 95 % (FR-001-14), 2 ГБ (spec), 30 хв (spec)"

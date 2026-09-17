@@ -79,6 +79,26 @@ def test_valid_config_loads(tmp_path):
     assert config["allowed_extensions"] == ["mp4", "mov", "webm"]
 
 
+def test_default_config_path_loads_canonical_config():
+    """
+    Regression (T-005/T-008 review): the bundled canonical ``bunny_config.yaml``
+    must load through ``load_bunny_config(DEFAULT_CONFIG_PATH)``.
+
+    Guards against an unquoted changelog ``date:`` value: ``yaml.safe_load``
+    parses it as ``datetime.date``, so the loader's string check raises
+    ``ValueError`` and the XBlock would fail to start.
+    """
+    from video_xblock.bunny_config import DEFAULT_CONFIG_PATH, load_bunny_config
+
+    config = load_bunny_config(DEFAULT_CONFIG_PATH)
+
+    assert config["version"] == "1.0.1"
+    assert config["changelog"][0]["version"] == "1.0.1"
+    for entry in config["changelog"]:
+        assert isinstance(entry["date"], str)
+        assert entry["date"] == "2026-09-17"
+
+
 @pytest.mark.parametrize(
     "overrides",
     [

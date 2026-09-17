@@ -30,7 +30,7 @@
 
 ## Phase 3: User Story 1 (P1) — вчитель завантажує відео в один крок
 
-- [ ] T-008 [FR-001-02] Напиши тест `video_xblock/tests/unit/test_create_upload.py` (`verifies: FR-001-02`): валідація входу `create_upload` — розширення ∈ allowed_extensions (mp4/mov/webm), MIME починається з `video/`, непідтримуваний файл → 400 зі зрозумілим повідомленням ДО виклику Bunny (фікстура create video не викликається); запусти, переконайся, що червоний з очікуваної причини (хендлер відсутній).
+- [x] T-008 [FR-001-02] Напиши тест `video_xblock/tests/unit/test_create_upload.py` (`verifies: FR-001-02`): валідація входу `create_upload` — розширення ∈ allowed_extensions (mp4/mov/webm), MIME починається з `video/`, непідтримуваний файл → 400 зі зрозумілим повідомленням ДО виклику Bunny (фікстура create video не викликається); запусти, переконайся, що червоний з очікуваної причини (хендлер відсутній).
 - [ ] T-009 [FR-001-02] Створи хендлер `create_upload` у `video_xblock/backends/bunny.py` (`BunnyPlayer`, `@XBlock.json_handler`): перевірки формату з YAML, створення відео через `BunnyApiClient`, запис метаданих (bunny_video_id, bunny_library_id, bunny_status=UPLOADING, bunny_title, source_type, token_protected, config_version), відповідь за contracts/xblock-interface.md §2.1; маркер `impl: FR-001-02`; тест T-008 зелений.
 - [ ] T-010 [FR-001-04] Напиши тест `video_xblock/tests/unit/test_upload_limits.py` (`verifies: FR-001-04`): file_size > max_upload_bytes → 400 з поясненням ліміту ДО будь-якого виклику Bunny (фікстура не викликається); розмір ≤ ліміту → успіх і фікстура create video викликана; запусти, переконайся, що червоний з очікуваної причини (перевірка відсутня).
 - [ ] T-011 [FR-001-04] Додай серверну перевірку розміру в `create_upload` у `video_xblock/backends/bunny.py` (повторна валідація проти `max_upload_bytes` з YAML — захист від підробки клієнта, research R4); маркер `impl: FR-001-04`; тест T-010 зелений.
@@ -151,3 +151,4 @@ MVP = Setup + Foundational + US1 + US2 (T-001..T-031). US3/US4 — P2/P3, не �
 - **US2** (перегляд учнем + захист): T-024..T-031
 
 Разом — 31 задача (T-001..T-031). Поза MVP: US3 (T-032..T-035), US4 (T-036, T-037), Polish (T-038, T-039).
+escalated: T-008 implementer->implementer-senior, reason=спроба 1: 5 тестів зелені до коду (локальні helpers); спроба 2: таймаут без змін
