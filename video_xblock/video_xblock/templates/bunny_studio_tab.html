@@ -1,0 +1,20 @@
+{# impl: FR-001-01 #}
+{% load video_xblock_tags %}
+<div class="bunny-studio-tab basic" data-bunny-status="{{ bunny_status }}">
+    {% if bunny_status == 'EMPTY' %}
+        <button type="button" class="bunny-upload">{% trans "Завантажити" %}</button>
+        <button type="button" class="bunny-link">{% trans "Вставити посилання" %}</button>
+    {% elif bunny_status == 'UPLOADING' %}
+        <p role="status">{% trans "Завантажується…" %}</p>
+        <progress class="bunny-upload-progress" aria-label="{% trans 'Прогрес завантаження' %}"></progress>
+    {% elif bunny_status == 'PROCESSING' %}
+        <p role="status">{% trans "Обробляється…" %}</p>
+    {% elif bunny_status == 'READY' %}
+        <p role="status">{% trans "Готово" %}</p>
+        <p class="bunny-duration">{% trans "Тривалість" %}: {{ bunny_length_seconds }} {% trans "с" %}</p>
+    {% elif bunny_status == 'ERROR' %}
+        <p role="alert">{% trans "Помилка завантаження або обробки відео. Спробуйте ще раз." %}</p>
+        <button type="button" class="bunny-upload">{% trans "Повторити" %}</button>
+        <button type="button" class="bunny-delete">{% trans "Видалити" %}</button>
+    {% endif %}
+</div>

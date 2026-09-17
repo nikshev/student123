@@ -1,4 +1,4 @@
-# impl: FR-001-04
+# impl: FR-001-01, FR-001-04
 # impl: FR-001-02, FR-001-05, FR-001-09
 # impl: FR-001-03, FR-001-09
 """
@@ -317,6 +317,21 @@ class BunnyPlayer(BaseVideoPlayer):
     """Bunny backend: create an upload and store its metadata."""
 
     url_re = []
+    basic_fields = ['display_name']
+    advanced_fields = ['start_time', 'end_time', 'handout', 'download_transcript_allowed']
+
+    def studio_context(self):
+        """Render stored state and versioned upload limits without API calls."""
+        config = load_bunny_config(DEFAULT_CONFIG_PATH)
+        return {
+            'studio_tab_template': 'bunny_studio_tab.html',
+            'bunny_status': self.xblock.metadata.get('bunny_status', 'EMPTY'),
+            'bunny_length_seconds': self.xblock.metadata.get('bunny_length_seconds'),
+            'bunny_config': {
+                'max_upload_bytes': config['max_upload_bytes'],
+                'allowed_extensions': config['allowed_extensions'],
+            },
+        }
 
     @XBlock.json_handler
     def create_upload(self, data, suffix=''):  # pylint: disable=unused-argument
