@@ -1,0 +1,8 @@
+# impl: FR-001-07
+name: video-xblock
+version: 0.1.0
+config:
+  defaults:
+    BUNNY_STREAM_LIBRARY_ID: ""
+    BUNNY_STREAM_API_KEY: ""
+    BUNNY_STREAM_TOKEN_KEY: ""

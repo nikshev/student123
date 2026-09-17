@@ -1,0 +1,7 @@
+# impl: FR-001-07
+# Секрети Bunny потрібні й у Studio (CMS), бо хендлери create_upload/
+# upload_credentials/video_info/delete_video виконуються в CMS. Значення задаються
+# `tutor config save --set BUNNY_STREAM_...=...`.
+BUNNY_STREAM_LIBRARY_ID = "{{ BUNNY_STREAM_LIBRARY_ID }}"
+BUNNY_STREAM_API_KEY = "{{ BUNNY_STREAM_API_KEY }}"
+BUNNY_STREAM_TOKEN_KEY = "{{ BUNNY_STREAM_TOKEN_KEY }}"

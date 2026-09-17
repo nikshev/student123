@@ -1,0 +1,5 @@
+# impl: FR-001-07
+# CSP для iframe Bunny player + Referrer-Policy, інакше domain-lock ламає плеєр
+# (quickstart S0, план «Constraints»).
+CSP_FRAME_SRC += ["https://player.mediadelivery.net"]
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"

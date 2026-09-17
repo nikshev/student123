@@ -1,0 +1,7 @@
+# impl: FR-001-07
+# Секрети Bunny — тільки Django settings через Tutor (config.yml), ніколи не в
+# course OLX (конституція, принцип III; план «Constraints»). Значення задаються
+# `tutor config save --set BUNNY_STREAM_...=...`.
+BUNNY_STREAM_LIBRARY_ID = "{{ BUNNY_STREAM_LIBRARY_ID }}"
+BUNNY_STREAM_API_KEY = "{{ BUNNY_STREAM_API_KEY }}"
+BUNNY_STREAM_TOKEN_KEY = "{{ BUNNY_STREAM_TOKEN_KEY }}"
