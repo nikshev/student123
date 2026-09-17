@@ -1,0 +1,24 @@
+# video_xblock/bunny_config.yaml
+# impl: FR-001-02, FR-001-04, FR-001-09, FR-001-14
+# Поведінкові константи XBlock «Відео» (Bunny Stream).
+# Зміна будь-якого значення ВИМАГАЄ запису в changelog і підйому version.
+
+version: 1.0.0
+
+token_ttl_seconds: 86400            # FR-001-09, SC-003: термін дії токена плеєра
+completion_threshold: 0.95          # FR-001-14: поріг повного перегляду
+max_upload_bytes: 2147483648        # FR-001-04: ліміт розміру (2 ГБ)
+max_duration_seconds: 1800          # припущення spec: максимальна тривалість (30 хв)
+allowed_extensions: [mp4, mov, webm]  # FR-001-02
+upload_auth_ttl_seconds: 86400      # термін дії TUS-підпису завантаження
+video_info_poll_interval_seconds: 5 # полінг стану енкодингу в Studio
+
+api_base_url: https://video.bunnycdn.com
+tus_endpoint: https://video.bunnycdn.com/tusupload
+embed_base_url: https://player.mediadelivery.net
+
+changelog:
+  - version: 1.0.0
+    date: 2026-09-17
+    changes:
+      - "Початкові значення: TTL 24 год (spec Assumptions), поріг 95 % (FR-001-14), 2 ГБ (spec), 30 хв (spec)"
