@@ -29,6 +29,7 @@ renders keep the same token/expires (R6) and differ only by that parameter.
 """
 
 import hashlib
+import json
 import unittest
 from unittest.mock import Mock, patch
 from urllib.parse import parse_qs, urlsplit
@@ -153,6 +154,22 @@ class BunnyStudentViewContextTests(unittest.TestCase):
             scheme=parts.scheme, netloc=parts.netloc, path=parts.path,
         ), parse_qs(parts.query)
 
+    def _assert_no_secret_leak(self, context):
+        """
+        No secret may reach the client, at any nesting depth.
+
+        The API key and the token security key live only on the server
+        (bunny-api.md §7, R9). A serialised search over the whole context —
+        including the ``signed_embed_url`` and the nested ``bunny_config`` — and
+        over the block metadata guarantees the invariant even if a future
+        implementation nests a secret inside a nested dict/URL fragment.
+        """
+        context_blob = json.dumps(context, sort_keys=True)
+        metadata_blob = json.dumps(self.xblock.metadata, sort_keys=True)
+        for secret in (API_KEY_SENTINEL, TOKEN_KEY_SENTINEL):
+            self.assertNotIn(secret, context_blob)
+            self.assertNotIn(secret, metadata_blob)
+
     def test_player_data_setup_signs_embed_url_and_exposes_yaml_context(self):
         with patch.object(bunny.time, "time", return_value=NOW):
             context = self.player.player_data_setup({})
@@ -178,6 +195,10 @@ class BunnyStudentViewContextTests(unittest.TestCase):
         # The signed URL is computed per render and never persisted (FR-001-09).
         self.assertNotIn("signed_embed_url", self.xblock.metadata)
         self.assertNotIn("signed_player_url", self.xblock.metadata)
+        # Secrets never leave the server (bunny-api.md §7, R9): neither the API
+        # key nor the token key may appear in the client context, the signed
+        # URL, or the block metadata.
+        self._assert_no_secret_leak(context)
 
     def test_player_data_setup_adds_unique_cache_buster_per_render(self):
         with patch.object(bunny.time, "time", return_value=NOW):
@@ -209,3 +230,6 @@ class BunnyStudentViewContextTests(unittest.TestCase):
         # A copied link dies when its token expires; neither render is stored
         # anywhere on the block (FR-001-09).
         self.assertNotIn("signed_embed_url", self.xblock.metadata)
+        # Secrets never leave the server on any render (bunny-api.md §7, R9).
+        self._assert_no_secret_leak(first)
+        self._assert_no_secret_leak(second)

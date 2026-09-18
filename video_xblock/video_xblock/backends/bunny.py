@@ -98,6 +98,12 @@ def _sha256_hex(text):
 # raw English API response to an author.
 VIDEO_SERVICE_ERROR_MESSAGE = _("Помилка сервісу відео, спробуйте пізніше")
 
+# Cache-buster query parameter appended to the signed embed URL so that several
+# players on one page each get a unique iframe (bunny-api.md §5, player.js
+# requirement). The parameter *name* is fixed by the contract; the *value* is a
+# fresh random nonce computed per render in ``BunnyPlayer.player_data_setup``.
+CACHE_BUSTER_PARAM = "cb"
+
 
 class BunnyApiClient(BaseApiClient):
     """
@@ -356,6 +362,50 @@ class BunnyPlayer(BaseVideoPlayer):
                 'max_upload_bytes': config['max_upload_bytes'],
                 'allowed_extensions': config['allowed_extensions'],
             },
+        }
+
+    def player_data_setup(self, context):
+        """
+        Sign a fresh embed URL and expose the versioned behavioural constants.
+
+        The student view never performs a synchronous Bunny call: the server
+        signs the embed URL on every render (contracts/xblock-interface.md §1)
+        through ``BunnyApiClient.signed_embed_url``, the single owner of the R6
+        token formula (bunny-api.md §5). The signed URL is returned to the
+        template context and is never persisted to block metadata, so a copied
+        link dies once its token expires (FR-001-09).
+
+        The TTL and completion threshold come from the versioned
+        ``bunny_config.yaml`` — not from hard-coded literals (constitution III)
+        — and are carried into the JS context together with ``config_version``
+        so two runs on different config artefacts are never compared.
+
+        A cache-buster parameter (fixed name ``cb``) is appended to the URL: its
+        value is a fresh random nonce per render, independent of the clock, so
+        several players on one page never share an iframe URL (bunny-api.md §5).
+        """
+        config = load_bunny_config(DEFAULT_CONFIG_PATH)
+        client = BunnyApiClient.from_settings(config)
+        video_id = self.xblock.metadata.get('bunny_video_id')
+
+        signed_url = client.signed_embed_url(video_id)
+        # Unique nonce per render, clock-independent: under a frozen clock the
+        # token/expires stay identical while the ``cb`` value keeps iframes
+        # unique (test_student_view.py freezes ``bunny.time.time``).
+        signed_url = "{url}&{param}={nonce}".format(
+            url=signed_url,
+            param=CACHE_BUSTER_PARAM,
+            nonce=os.urandom(8).hex(),
+        )
+
+        return {
+            'bunny_config': {
+                'completion_threshold': config['completion_threshold'],
+                'token_ttl_seconds': config['token_ttl_seconds'],
+            },
+            'bunny_video_id': video_id,
+            'signed_embed_url': signed_url,
+            'config_version': config['version'],
         }
 
     @XBlock.json_handler
