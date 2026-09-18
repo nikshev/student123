@@ -13,6 +13,10 @@ const YAML = require('yaml');
 // videoId is the block's persisted GUID; refresh credentials before resume/start.
 // TUS onError returns the recovery Promise so callers can await a 404 restart.
 // Fresh/replacement uploads must not reuse a stale previous upload URL.
+// Optional progressElement is a native <progress>; onProgress(percent, sent, total).
+// onError receives a safe Error with .cause; startup failures also reject.
+// TUS callback failures resolve to that Error (also on upload.error), avoiding
+// unhandled rejections when tus ignores callback return values.
 
 jest.mock('tus-js-client', () => ({Upload: jest.fn()}), {virtual: true});
 const tus = require('tus-js-client');
@@ -130,6 +134,60 @@ describe('pre-validation before any request', () => {
     expect(request).not.toHaveBeenCalled();
     expect(fetchGuard).not.toHaveBeenCalled();
     expect(tus.Upload).not.toHaveBeenCalled();
+  });
+});
+
+describe('progress and useful errors', () => {
+  test('updates injected progress and callback without requiring a DOM', async () => {
+    request.mockResolvedValueOnce(created);
+    const progressElement = {max: 1, value: 0};
+    const onProgress = jest.fn();
+    const upload = await startUpload({file, config, request, progressElement, onProgress});
+    upload.options.onProgress(file.size / 2, file.size);
+    expect(progressElement).toEqual({max: 100, value: 50});
+    expect(onProgress).toHaveBeenLastCalledWith(50, file.size / 2, file.size);
+    upload.options.onProgress(0, 0);
+    expect(progressElement.value).toBe(0);
+    upload.options.onProgress(file.size, file.size);
+    expect(progressElement.value).toBe(100);
+  });
+
+  test('reports a safe TUS error without recreating a GUID on non-404 failures', async () => {
+    request.mockResolvedValueOnce(refreshed);
+    const onError = jest.fn();
+    const upload = await startUpload({file, config, request, videoId: created.video_id, onError});
+    const cause = Object.assign(new Error('raw signed URL must not reach UI'), {
+      originalResponse: {getStatus: () => 503},
+    });
+    const error = await upload.options.onError(cause);
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toContain('Повторіть');
+    expect(error.message).not.toContain(cause.message);
+    expect(error.cause).toBe(cause);
+    expect(upload.error).toBe(error);
+    expect(onError).toHaveBeenCalledWith(error);
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(uploads).toHaveLength(1);
+  });
+
+  test('rejects and reports handler failures before constructing TUS', async () => {
+    const cause = new Error('recorded service failure');
+    request.mockRejectedValueOnce(cause);
+    const onError = jest.fn();
+    await expect(startUpload({file, config, request, onError})).rejects.toThrow('Повторіть');
+    expect(onError).toHaveBeenCalledWith(expect.objectContaining({cause}));
+    expect(tus.Upload).not.toHaveBeenCalled();
+  });
+
+  test('reports a failed 404 replacement without an unhandled callback rejection', async () => {
+    request.mockResolvedValueOnce(refreshed).mockRejectedValueOnce(new Error('service down'));
+    const onError = jest.fn();
+    const upload = await startUpload({file, config, request, videoId: created.video_id, onError});
+    const error = await upload.options.onError({originalResponse: {getStatus: () => 404}});
+    expect(error).toBeInstanceOf(Error);
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledWith(error);
+    expect(uploads).toHaveLength(1);
   });
 });
 
