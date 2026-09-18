@@ -55,6 +55,7 @@ class CreateUploadHandlerTests(unittest.TestCase):
             self.addCleanup(blocker.stop)
 
         runtime = TestRuntime()  # pylint: disable=abstract-class-instantiated
+        runtime.is_author_mode = True  # T-029 access guards: Studio-authoring context.
         self.xblock = VideoXBlock(
             runtime,
             DictFieldData({"account_id": "account_id", "metadata": {}}),

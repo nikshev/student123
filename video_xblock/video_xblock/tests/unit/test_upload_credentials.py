@@ -48,8 +48,10 @@ class UploadCredentialsTests(unittest.TestCase):
         self.client.tus_endpoint = self.config["tus_endpoint"]
         self.client.create_video.side_effect = lambda title: deepcopy(CREATE_VIDEO_200["body"])
 
+        runtime = TestRuntime()
+        runtime.is_author_mode = True  # T-029 access guards: Studio-authoring context.
         self.xblock = VideoXBlock(
-            TestRuntime(),
+            runtime,
             DictFieldData({
                 "account_id": "account_id",
                 "metadata": {
@@ -127,8 +129,10 @@ class UploadCredentialsTests(unittest.TestCase):
 
     def test_rejects_block_without_bunny_video_id(self):
         # A block that has no bunny_video_id has nothing to resume (FR-001-03).
+        runtime = TestRuntime()
+        runtime.is_author_mode = True  # T-029 access guards: Studio-authoring context.
         xblock = VideoXBlock(
-            TestRuntime(),
+            runtime,
             DictFieldData({"account_id": "account_id", "metadata": {}}),
             scope_ids=Mock(spec=[]),
         )

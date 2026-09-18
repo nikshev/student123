@@ -48,8 +48,10 @@ def polling():
         client.library_id = created["videoLibraryId"]
         client.delete_video.side_effect = lambda video_id: deepcopy(DELETE_VIDEO_200["body"])
 
+        runtime = TestRuntime()
+        runtime.is_author_mode = True  # T-029 access guards: Studio-authoring context.
         xblock = VideoXBlock(
-            TestRuntime(),
+            runtime,
             DictFieldData({
                 "account_id": "account_id",
                 "metadata": {

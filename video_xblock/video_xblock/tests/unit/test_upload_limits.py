@@ -61,8 +61,10 @@ class UploadLimitsTests(unittest.TestCase):
 
     def _create_upload(self, request):
         # Each call starts from an empty block, including the lower-limit retry.
+        runtime = TestRuntime()
+        runtime.is_author_mode = True  # T-029 access guards: Studio-authoring context.
         xblock = VideoXBlock(
-            TestRuntime(),
+            runtime,
             DictFieldData({"account_id": "account_id", "metadata": {}}),
             scope_ids=Mock(spec=[]),
         )

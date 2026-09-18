@@ -75,8 +75,10 @@ class DeleteVideoHandlerTests(unittest.TestCase):
         }
 
         # A block that already holds a finished (READY) video.
+        runtime = TestRuntime()
+        runtime.is_author_mode = True  # T-029 access guards: Studio-authoring context.
         self.xblock = VideoXBlock(
-            TestRuntime(),
+            runtime,
             DictFieldData({
                 "account_id": "account_id",
                 "metadata": {
@@ -168,8 +170,10 @@ class DeleteVideoHandlerTests(unittest.TestCase):
     def test_delete_video_on_empty_block_resets_without_bunny_call(self):
         # A block that never held a video (data-model §1: no bunny_video_id) is
         # simply reset to EMPTY — no Bunny call must be made for a missing id.
+        runtime = TestRuntime()
+        runtime.is_author_mode = True  # T-029 access guards: Studio-authoring context.
         empty_block = VideoXBlock(
-            TestRuntime(),
+            runtime,
             DictFieldData({"account_id": "account_id", "metadata": {}}),
             scope_ids=Mock(spec=[]),
         )

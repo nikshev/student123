@@ -103,6 +103,9 @@ class BunnyStudentViewContextTests(unittest.TestCase):
         self.enterContext(patch.object(
             bunny, "load_bunny_config", return_value=SENTINEL_CONFIG,
         ))
+        self.enterContext(patch.object(
+            bunny.BunnyPlayer, "_is_enrolled", create=True, return_value=True,
+        ))
         self.config = SENTINEL_CONFIG
 
         self.xblock = VideoXBlock(
@@ -290,6 +293,9 @@ class BunnyStudentViewRenderTests(unittest.TestCase):
             "xblock.plugin.PLUGIN_CACHE",
             {("video_xblock.v1", "bunny"): bunny.BunnyPlayer},
         ))
+        self.enterContext(patch.object(
+            bunny.BunnyPlayer, "_is_enrolled", create=True, return_value=True,
+        ))
         self.config = SENTINEL_CONFIG
 
         self.xblock = VideoXBlock(
@@ -387,6 +393,7 @@ class BunnyStudentViewRenderTests(unittest.TestCase):
         body = self._render_student_player()
         self.assertIn("playerjs.min.js", body)
         self.assertIn("bunny_player.js", body)
+        self.assertIn("bunny_unavailable_fallback.js", body)
 
     def test_student_view_has_no_third_party_navigation(self):
         """

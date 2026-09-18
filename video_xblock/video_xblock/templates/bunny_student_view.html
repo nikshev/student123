@@ -1,3 +1,5 @@
+{# impl: FR-001-10 #}
+{% if signed_embed_url %}
 <div class="bunny-video-player" data-video-id="{{ bunny_video_id }}" data-config-version="{{ config_version }}">
     <iframe
         id="{{ video_player_id }}"
@@ -12,4 +14,8 @@
     ></iframe>
 </div>
 <script src="{{ playerjs_url }}"></script>
+<script src="{{ bunny_unavailable_fallback_url }}"></script>
 <script src="{{ bunny_player_js_url }}"></script>
+{% else %}
+<div class="bunny-video-unavailable">Відео недоступне</div>
+{% endif %}

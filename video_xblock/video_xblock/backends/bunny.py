@@ -1,4 +1,6 @@
 # impl: FR-001-01, FR-001-04
+# impl: FR-001-10
+# impl: FR-001-08
 # impl: FR-001-02, FR-001-05, FR-001-09
 # impl: FR-001-03, FR-001-09
 # impl: FR-001-06
@@ -387,8 +389,25 @@ class BunnyPlayer(BaseVideoPlayer):
         several players on one page never share an iframe URL (bunny-api.md §5).
         """
         config = load_bunny_config(DEFAULT_CONFIG_PATH)
+        base_context = {
+            'bunny_config': {
+                'completion_threshold': config['completion_threshold'],
+                'token_ttl_seconds': config['token_ttl_seconds'],
+            },
+            'bunny_video_id': self.xblock.metadata.get('bunny_video_id'),
+            'config_version': config['version'],
+        }
+        is_author_mode = getattr(self.xblock.runtime, 'is_author_mode', False)
+
+        if not is_author_mode and not self._is_enrolled():
+            return base_context
+
+        # If the video is in an ERROR state, do not sign an embed URL.
+        if self.xblock.metadata.get('bunny_status') == 'ERROR':
+            return base_context
+
         client = BunnyApiClient.from_settings(config)
-        video_id = self.xblock.metadata.get('bunny_video_id')
+        video_id = base_context['bunny_video_id']
 
         signed_url = client.signed_embed_url(video_id)
         # Unique nonce per render, clock-independent: under a frozen clock the
@@ -400,15 +419,8 @@ class BunnyPlayer(BaseVideoPlayer):
             nonce=os.urandom(8).hex(),
         )
 
-        return {
-            'bunny_config': {
-                'completion_threshold': config['completion_threshold'],
-                'token_ttl_seconds': config['token_ttl_seconds'],
-            },
-            'bunny_video_id': video_id,
-            'signed_embed_url': signed_url,
-            'config_version': config['version'],
-        }
+        base_context['signed_embed_url'] = signed_url
+        return base_context
 
     def _local_resource_url(self, path):
         """
@@ -437,18 +449,24 @@ class BunnyPlayer(BaseVideoPlayer):
         navigation target other than the configured embed origin is introduced.
         """
         context.update(self.player_data_setup(context))
-        context.update({
-            'playerjs_url': self._local_resource_url('static/js/lib/playerjs.min.js'),
-            'bunny_player_js_url': self._local_resource_url('static/js/student/bunny_player.js'),
-        })
-        return Response(
-            self.render_template('bunny_student_view.html', **context),
-            content_type='text/html',
-        )
+        # Add script URLs only if we have a signed embed URL (i.e., video is available)
+        if 'signed_embed_url' in context:
+            context.update({
+                'playerjs_url': self._local_resource_url('static/js/lib/playerjs.min.js'),
+                'bunny_player_js_url': self._local_resource_url('static/js/student/bunny_player.js'),
+                'bunny_unavailable_fallback_url': self._local_resource_url(
+                    'static/js/student/bunny_unavailable_fallback.js'
+                ),
+            })
+        # Render the template which handles both available and unavailable states
+        html = self.render_template('bunny_student_view.html', **context)
+        return Response(html.encode('utf-8'), content_type='text/html; charset=utf-8')
 
     @XBlock.json_handler
     def create_upload(self, data, suffix=''):  # pylint: disable=unused-argument
         """Validate the format before creating a video (contract §2.1)."""
+        if not getattr(self.xblock.runtime, 'is_author_mode', False):
+            raise JsonHandlerError(403, _('Доступно лише у Studio.'))
         config = load_bunny_config(DEFAULT_CONFIG_PATH)
         file_name = data.get('file_name') if isinstance(data, dict) else None
         file_type = data.get('file_type') if isinstance(data, dict) else None
@@ -533,6 +551,8 @@ class BunnyPlayer(BaseVideoPlayer):
         versioned ``bunny_config.yaml`` and is never hard-coded here
         (constitution III).
         """
+        if not getattr(self.xblock.runtime, 'is_author_mode', False):
+            raise JsonHandlerError(403, _('Доступно лише у Studio.'))
         config = load_bunny_config(DEFAULT_CONFIG_PATH)
         video_id = data.get('video_id') if isinstance(data, dict) else None
         if not isinstance(video_id, str) or not video_id:
@@ -581,6 +601,8 @@ class BunnyPlayer(BaseVideoPlayer):
         ``max_duration_seconds`` (from the versioned YAML, constitution III) is
         deleted via the client and marked ERROR (research R4).
         """
+        if not getattr(self.xblock.runtime, 'is_author_mode', False):
+            raise JsonHandlerError(403, _('Доступно лише у Studio.'))
         config = load_bunny_config(DEFAULT_CONFIG_PATH)
         video_id = data.get('video_id') if isinstance(data, dict) else None
         if not isinstance(video_id, str) or not video_id:
@@ -659,6 +681,35 @@ class BunnyPlayer(BaseVideoPlayer):
         reset['bunny_status'] = 'EMPTY'
         self.xblock.metadata.update(reset)
 
+    def _is_enrolled(self):
+        """Check if the current user is enrolled in the course.
+
+        The production path asks Open edX's ``enrollments`` and ``user`` runtime
+        services: current user id comes from ``user.opt_attrs`` and the course
+        id from ``scope_ids.usage_id.context_key``.  This method is also the
+        test seam for FR-001-08, so unit tests patch it without relying on
+        platform services.  Any missing service, missing attribute or service
+        error returns ``False`` (fail closed).
+        """
+        try:
+            enrollments_service = self.xblock.runtime.service(self.xblock, 'enrollments')
+            user_service = self.xblock.runtime.service(self.xblock, 'user')
+            user = user_service.get_current_user()
+            user_id = user.opt_attrs.get('edx-platform.user_id')
+            course_id = self.xblock.scope_ids.usage_id.context_key
+
+            if not enrollments_service or not user_id or not course_id:
+                return False
+
+            enrollment = enrollments_service.get_active_enrollments_by_course_and_user(
+                course_id,
+                user_id,
+            )
+            return bool(enrollment)
+        except Exception:
+            pass
+        return False
+
     @XBlock.json_handler
     def delete_video(self, data, suffix=''):  # pylint: disable=unused-argument
         """
@@ -671,6 +722,8 @@ class BunnyPlayer(BaseVideoPlayer):
         regardless. A block that already has no video id is simply reset
         without any Bunny call.
         """
+        if not getattr(self.xblock.runtime, 'is_author_mode', False):
+            raise JsonHandlerError(403, _('Доступно лише у Studio.'))
         config = load_bunny_config(DEFAULT_CONFIG_PATH)
         video_id = self.xblock.metadata.get('bunny_video_id')
         if video_id:
