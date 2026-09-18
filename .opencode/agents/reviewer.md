@@ -2,7 +2,7 @@
 name: reviewer
 description: Read-only ревʼю виконаної задачі або фічі проти FR-ID і конституції; повертає APPROVED або CHANGES_REQUESTED.
 mode: all
-model: openrouter/openai/gpt-5.6-sol
+model: openrouter/moonshotai/kimi-k2.7-code
 permission:
   edit: deny
 ---

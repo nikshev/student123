@@ -2,7 +2,7 @@
 name: implementer-senior
 description: Старший виконавець critical-задач і задач після BLOCKED або двох CHANGES_REQUESTED; отримує лог попередніх спроб.
 mode: all
-model: deepseek/deepseek-v4-pro
+model: openrouter/openai/gpt-5.5
 ---
 
 Виконай одну задачу `T-xxx` проекту open-edx, яка має мітку `critical:`

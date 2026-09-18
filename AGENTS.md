@@ -58,9 +58,9 @@ reviewer запускай після завершення implementer.
 | Коли | Агент | Модель |
 |---|---|---|
 | план, data-model, contracts, декомпозиція на задачі | `architect` | openrouter/openai/gpt-5.6-sol |
-| звичайна задача `T-xxx` | `implementer` | openrouter/stealth/union-alpha |
-| задача з міткою `critical:`, або після ескалації | `implementer-senior` | deepseek/deepseek-v4-pro |
-| ревʼю після кожної задачі і перед мержем фічі | `reviewer` | openrouter/openai/gpt-5.6-sol, read-only |
+| звичайна задача `T-xxx` | `implementer` | openrouter/openai/gpt-oss-120b |
+| задача з міткою `critical:`, або після ескалації | `implementer-senior` | openrouter/openai/gpt-5.5 |
+| ревʼю після кожної задачі і перед мержем фічі | `reviewer` | openrouter/moonshotai/kimi-k2.7-code, read-only |
 
 ### Ескалація — автоматична
 
