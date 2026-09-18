@@ -155,3 +155,4 @@ escalated: T-008 implementer->implementer-senior, reason=спроба 1: 5 те�
 escalated: T-020 implementer->implementer-senior, reason=спроба 1: питання замість тесту; спроба 2: OLX-тест зелений до коду (нічого не доводить)
 note: T-021 фікс теж на deepseek-v4-pro — stealth/union-alpha повертає OpenRouter server error після поповнення; gpt-5.6-sol працює
 escalated: T-023 implementer->implementer-senior, reason=reviewer 2× CHANGES_REQUESTED: replace-error-path лишає блок у READY з мертвим GUID замість EMPTY
+escalated: T-026 implementer->implementer-senior, reason=BLOCKED: модель openrouter/stealth/union-alpha недоступна (Model not found)
