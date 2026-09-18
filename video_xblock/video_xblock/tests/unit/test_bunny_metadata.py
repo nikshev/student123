@@ -51,6 +51,14 @@ class BunnyMetadataTests(unittest.TestCase):
             BUNNY_STREAM_TOKEN_KEY=TOKEN_KEY_SENTINEL,
         ))
         self.enterContext(patch.object(bunny.time, 'time', return_value=1750000000))
+        # The editable install predates the `bunny` entry point in setup.py, so
+        # register the backend in the SDK plugin cache instead (mirrors
+        # test_bunny_studio_view.real_block): the exporter resolves it via
+        # ``VideoXBlock.get_player()``, not by importing BunnyPlayer directly.
+        self.enterContext(patch.dict(
+            'xblock.plugin.PLUGIN_CACHE',
+            {('video_xblock.v1', 'bunny'): bunny.BunnyPlayer},
+        ))
         with DEFAULT_CONFIG_PATH.open(encoding='utf-8') as config_file:
             self.config = yaml.safe_load(config_file)
         self.xblock = VideoXBlock(
@@ -133,3 +141,47 @@ class BunnyMetadataTests(unittest.TestCase):
             self.assertNotIn(forbidden, olx)
         self.assertNotIn('token=', olx)
         self.assertNotIn('expires=', olx)
+
+    def test_export_does_not_mutate_block_metadata(self):
+        """Export filters only the OLX representation, never the block state.
+
+        ``add_xml_to_node`` must not delete data from ``self.metadata``: even a
+        simulated leak (API key, token key, signed player URL) stays in the
+        block's metadata after the export — only the emitted OLX is stripped
+        down to the backend-declared fields (data-model.md §1, FR-001-06).
+        """
+        player = bunny.BunnyPlayer(self.xblock)
+        client = bunny.BunnyApiClient.from_settings(self.config)
+        signed_player_url = client.signed_embed_url(CREATE_VIDEO_200['body']['guid'])
+
+        self.xblock.metadata.update({
+            'bunny_video_id': CREATE_VIDEO_200['body']['guid'],
+            'bunny_library_id': CREATE_VIDEO_200['body']['videoLibraryId'],
+            'bunny_status': 'READY',
+            'bunny_length_seconds': VIDEO_INFO_STATUSES[4]['body']['length'],
+            'bunny_title': CREATE_VIDEO_200['body']['title'],
+            'source_type': 'bunny',
+            'token_protected': True,
+            'config_version': self.config['version'],
+            'upload_signature_expires': 1750000000 + self.config['upload_auth_ttl_seconds'],
+            # Simulated leak — must remain in the block state after export:
+            'api_key': API_KEY_SENTINEL,
+            'token_key': TOKEN_KEY_SENTINEL,
+            'signed_player_url': signed_player_url,
+        })
+        original_metadata = dict(self.xblock.metadata)
+        allowed_fields = set(player.metadata_fields())
+
+        node = etree.Element('unknown')
+        self.xblock.add_xml_to_node(node)
+
+        # The block state is untouched by the export.
+        self.assertEqual(dict(self.xblock.metadata), original_metadata)
+        for key in LEAK_KEYS:
+            self.assertIn(key, self.xblock.metadata)
+        # ...while the emitted representation is still filtered to allowed fields.
+        exported = etree.fromstring(etree.tostring(node))
+        exported_metadata = json.loads(exported.get('metadata'))
+        self.assertTrue(set(exported_metadata) <= allowed_fields)
+        for key in LEAK_KEYS:
+            self.assertNotIn(key, exported_metadata)

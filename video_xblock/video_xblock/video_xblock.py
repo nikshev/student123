@@ -1,3 +1,5 @@
+# impl: FR-001-01
+# impl: FR-001-06
 """
 Video XBlock provides a convenient way to embed videos hosted on supported platforms into your course.
 
@@ -133,6 +135,11 @@ class VideoXBlock(
 
     player_name = String(
         default=PlayerName.DUMMY,
+        values=[
+            PlayerName.DUMMY, PlayerName.YOUTUBE, PlayerName.VIMEO,
+            PlayerName.BRIGHTCOVE, PlayerName.HTML5, PlayerName.WISTIA,
+            PlayerName.TENCENT, PlayerName.BUNNY,
+        ],
         scope=Scope.content
     )
 
@@ -212,7 +219,34 @@ class VideoXBlock(
         """
         Return list of xblock's editable fields used by StudioEditableXBlockMixin.clean_studio_edits().
         """
-        return self.get_player().editable_fields
+        fields = self.get_player().editable_fields
+        if self.player_name in (PlayerName.DUMMY, PlayerName.BUNNY):
+            return fields + ('player_name',)
+        return fields
+
+    def add_xml_to_node(self, node):
+        """
+        Export this block to OLX, restricted to backend-declared metadata.
+
+        Bunny metadata is exactly the active backend's ``metadata_fields()``
+        and nothing else (data-model.md §1, FR-001-06): the API key, the token
+        key and a signed player URL must never survive an OLX export, whatever
+        happened to be written into the ``metadata`` dict. The active backend
+        is resolved through the existing ``get_player()`` interface and only
+        the serialized representation is filtered — ``self.metadata`` is never
+        mutated, so exporting cannot delete data from the block state. Other
+        backends keep exporting their own metadata unchanged.
+        """
+        super(VideoXBlock, self).add_xml_to_node(node)
+        if self.player_name != PlayerName.BUNNY or node.get('metadata') is None:
+            return
+        allowed_fields = self.get_player().metadata_fields()
+        filtered_metadata = {
+            key: value
+            for key, value in self.metadata.items()
+            if key in allowed_fields
+        }
+        node.set('metadata', self.fields['metadata'].to_string(filtered_metadata))
 
     def validate_href_data(self, validation, data):
         """
@@ -406,6 +440,7 @@ class VideoXBlock(
             'advancedTabEnabled': player.advanced_tab_enabled,
         }
 
+        context.update(player.studio_context())
         fragment.content = render_template('studio-edit.html', **context)
         fragment.add_css(resource_string("static/css/student-view.css"))
         fragment.add_css(resource_string("static/css/transcripts-upload.css"))
@@ -481,11 +516,18 @@ class VideoXBlock(
         Arguments:
             data (dict): POST data.
         """
+        # Bunny is selected explicitly in Studio, never inferred from a URL.
+        # Leave stored metadata alone when editing its display settings.
+        if data.get('player_name', self.player_name) == PlayerName.BUNNY:
+            data['player_name'] = PlayerName.BUNNY
+            data['href'] = ''
+            return
+
         data['player_name'] = self.fields['player_name'].default  # pylint: disable=unsubscriptable-object
         for player_name, player_class in BaseVideoPlayer.load_classes():
             if player_name == PlayerName.DUMMY:
                 continue
-            if player_class.match(data['href']):
+            if player_class.match(data.get('href', self.href)):
                 data['player_name'] = player_name
                 log.debug("Submitted player[{}] with data: {}".format(player_name, data))
                 break

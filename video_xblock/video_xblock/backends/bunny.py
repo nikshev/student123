@@ -1,6 +1,7 @@
 # impl: FR-001-01, FR-001-04
 # impl: FR-001-02, FR-001-05, FR-001-09
 # impl: FR-001-03, FR-001-09
+# impl: FR-001-06
 """
 Bunny Stream API client.
 
@@ -319,6 +320,29 @@ class BunnyPlayer(BaseVideoPlayer):
     url_re = []
     basic_fields = ['display_name']
     advanced_fields = ['start_time', 'end_time', 'handout', 'download_transcript_allowed']
+
+    def metadata_fields(self):
+        """
+        Return the exact set of keys stored in the metadata xblock field.
+
+        This is the authoritative declaration of what belongs in the block for
+        ``player_name='bunny'`` (data-model.md §1). The video lives only in
+        Bunny Stream (FR-001-06): the server keeps metadata and no secrets, and
+        the signed player URL is never stored (it is re-signed per render,
+        FR-001-09). Keys not listed here — the API key, the token key, a signed
+        player URL — must never survive an OLX export.
+        """
+        return [
+            'bunny_video_id',
+            'bunny_library_id',
+            'bunny_status',
+            'bunny_length_seconds',
+            'bunny_title',
+            'source_type',
+            'token_protected',
+            'config_version',
+            'upload_signature_expires',
+        ]
 
     def studio_context(self):
         """Render stored state and versioned upload limits without API calls."""
