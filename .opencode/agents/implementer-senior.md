@@ -2,7 +2,7 @@
 name: implementer-senior
 description: Старший виконавець critical-задач і задач після BLOCKED або двох CHANGES_REQUESTED; отримує лог попередніх спроб.
 mode: all
-model: openrouter/openai/gpt-5.5
+model: openrouter/moonshotai/kimi-k2.7-code
 ---
 
 Виконай одну задачу `T-xxx` проекту open-edx, яка має мітку `critical:`
