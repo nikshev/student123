@@ -421,3 +421,20 @@ class BunnyStudentViewRenderTests(unittest.TestCase):
             offenders, [],
             "student view must not reference third-party origins (FR-001-07)",
         )
+
+    def test_student_view_includes_completion_threshold_and_save_event_data_attrs(self):
+        """
+        FR-001-14: the bridge needs the threshold and save_event URL in the DOM.
+
+        The player container carries the completion threshold from the versioned
+        YAML and the handler URL for save_event so the client-side bridge can
+        compute complete events and post them back to the server without trusting
+        client-supplied constants.
+        """
+        body = self._render_student_player()
+        self.assertIn('data-completion-threshold="0.73"', body)
+        self.assertIn('data-save-event-url="/handler/save_player_state"', body)
+        # Make sure the handler URL is the mocked runtime value, not empty, and
+        # not persisted to block metadata.
+        self.assertNotIn("data-save-event-url=\"\"", body)
+        self.assertNotIn("save_event_url", self.xblock.metadata)

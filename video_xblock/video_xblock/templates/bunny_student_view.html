@@ -1,6 +1,12 @@
 {# impl: FR-001-10 #}
 {% if signed_embed_url %}
-<div class="bunny-video-player" data-video-id="{{ bunny_video_id }}" data-config-version="{{ config_version }}">
+<div
+    class="bunny-video-player"
+    data-video-id="{{ bunny_video_id }}"
+    data-config-version="{{ config_version }}"
+    data-completion-threshold="{{ bunny_config.completion_threshold }}"
+    data-save-event-url="{{ save_event_url }}"
+>
     <iframe
         id="{{ video_player_id }}"
         class="bunny-video-iframe"

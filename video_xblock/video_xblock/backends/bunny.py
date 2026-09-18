@@ -6,6 +6,7 @@
 # impl: FR-001-06
 # impl: FR-001-16
 # impl: FR-001-07
+# impl: FR-001-14
 """
 Bunny Stream API client.
 
@@ -449,9 +450,11 @@ class BunnyPlayer(BaseVideoPlayer):
         navigation target other than the configured embed origin is introduced.
         """
         context.update(self.player_data_setup(context))
-        # Add script URLs only if we have a signed embed URL (i.e., video is available)
+        # Add script URLs and the event-handler URL only if we have a signed
+        # embed URL (i.e., the video is available and the student is enrolled).
         if 'signed_embed_url' in context:
             context.update({
+                'save_event_url': self.xblock.runtime.handler_url(self.xblock, 'save_event'),
                 'playerjs_url': self._local_resource_url('static/js/lib/playerjs.min.js'),
                 'bunny_player_js_url': self._local_resource_url('static/js/student/bunny_player.js'),
                 'bunny_unavailable_fallback_url': self._local_resource_url(
