@@ -8,6 +8,7 @@
 # impl: FR-001-07
 # impl: FR-001-14
 # impl: FR-001-12, FR-001-13, FR-001-15
+# impl: FR-001-11
 """
 Bunny Stream API client.
 
@@ -40,9 +41,11 @@ from django.conf import settings
 from webob import Response
 from xblock.core import XBlock
 from xblock.exceptions import JsonHandlerError
+from xblock.plugin import PluginMissingError
 
 from video_xblock.backends.base import BaseApiClient, BaseVideoPlayer
 from video_xblock.bunny_config import DEFAULT_CONFIG_PATH, load_bunny_config
+from video_xblock.constants import PlayerName
 from video_xblock.exceptions import ApiClientError
 from video_xblock.utils import ugettext as _
 
@@ -109,6 +112,13 @@ VIDEO_SERVICE_ERROR_MESSAGE = _("Помилка сервісу відео, сп�
 # requirement). The parameter *name* is fixed by the contract; the *value* is a
 # fresh random nonce computed per render in ``BunnyPlayer.player_data_setup``.
 CACHE_BUSTER_PARAM = "cb"
+
+# Production player_name values (entry-point names) -> public source_type schema
+# for tracking events (contracts/tracking-events.md §2).
+EXTERNAL_SOURCE_TYPES = {
+    PlayerName.YOUTUBE: 'youtube',
+    PlayerName.VIMEO: 'vimeo',
+}
 
 
 class BunnyApiClient(BaseApiClient):
@@ -750,6 +760,10 @@ class BunnyPlayer(BaseVideoPlayer):
         ``current_time`` (tracking-events.md §1–3, xblock-interface.md §2.3).
         ``duration`` for Bunny is taken from metadata, not from the request, so
         a forged client value cannot inflate the completion metric (FR-001-13).
+        For YouTube/Vimeo the ``video_ref`` is derived from the external URL via
+        the fork's ``media_id`` seam and ``duration`` is taken from the client,
+        because Bunny metadata does not exist for those sources (research R7,
+        tracking-events.md §2, data-model.md §2).
         """
         if getattr(self.xblock.runtime, 'is_author_mode', False):
             raise JsonHandlerError(403, _('Тільки у LMS доступно.'))
@@ -767,6 +781,21 @@ class BunnyPlayer(BaseVideoPlayer):
         if isinstance(current_time, bool) or not isinstance(current_time, (int, float)):
             raise JsonHandlerError(400, _('current_time має бути числом.'))
 
+        player_name = str(self.xblock.player_name)
+        source_type = EXTERNAL_SOURCE_TYPES.get(player_name)
+        if source_type is not None:
+            duration = data.get('duration')
+            if isinstance(duration, bool) or not isinstance(duration, (int, float)):
+                raise JsonHandlerError(400, _('duration має бути числом.'))
+            video_ref = self._external_video_ref(player_name, source_type)
+        else:
+            # Bunny and any other future backend: server-side duration and Bunny metadata.
+            duration = self.xblock.metadata.get('bunny_length_seconds')
+            video_ref = {
+                'source_type': 'bunny',
+                'video_id': self.xblock.metadata.get('bunny_video_id'),
+            }
+
         try:
             user_service = self.xblock.runtime.service(self.xblock, 'user')
             if user_service is None:
@@ -783,13 +812,10 @@ class BunnyPlayer(BaseVideoPlayer):
             'user_id': user_id,
             'course_id': str(self.xblock.scope_ids.usage_id.context_key),
             'unit_usage_key': str(self.xblock.scope_ids.usage_id),
-            'video_ref': {
-                'source_type': 'bunny',
-                'video_id': self.xblock.metadata.get('bunny_video_id'),
-            },
+            'video_ref': video_ref,
             'event_type': event_type,
             'current_time': current_time,
-            'duration': self.xblock.metadata.get('bunny_length_seconds'),
+            'duration': duration,
             'config_version': config['version'],
         }
         self.xblock.runtime.publish(
@@ -798,3 +824,36 @@ class BunnyPlayer(BaseVideoPlayer):
             payload,
         )
         return {'result': 'success'}
+
+    def _external_video_ref(self, player_name, source_type):
+        """
+        Build ``video_ref`` for an external YouTube/Vimeo source.
+
+        The fork already knows how to normalise a video URL into a stable id:
+        ``YoutubePlayer.media_id`` and ``VimeoPlayer.media_id``. Reusing that
+        method keeps the tracking payload consistent with the rendered player
+        without duplicating URL-parsing rules (research R7, tracking-events.md
+        §2, video_xblock.py:479).
+
+        ``player_name`` is the production entry-point value
+        (``PlayerName.YOUTUBE`` / ``PlayerName.VIMEO``); ``source_type`` is the
+        public schema value ('youtube' / 'vimeo') stored in the tracking event.
+        """
+        try:
+            player_class = BaseVideoPlayer.load_class(player_name)
+        except PluginMissingError:
+            # Tests run without entry-point registration; fall back to direct
+            # imports so the same ``media_id`` method is still used.
+            from video_xblock.backends.youtube import YoutubePlayer
+            from video_xblock.backends.vimeo import VimeoPlayer
+            player_class = {
+                PlayerName.YOUTUBE: YoutubePlayer,
+                PlayerName.VIMEO: VimeoPlayer,
+            }.get(player_name)
+        if player_class is None:
+            return {'source_type': source_type, 'video_id': None}
+        try:
+            video_id = player_class(self.xblock).media_id(self.xblock.href)
+        except Exception:
+            video_id = None
+        return {'source_type': source_type, 'video_id': video_id}
