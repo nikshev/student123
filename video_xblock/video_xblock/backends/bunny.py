@@ -7,6 +7,7 @@
 # impl: FR-001-16
 # impl: FR-001-07
 # impl: FR-001-14
+# impl: FR-001-12, FR-001-13, FR-001-15
 """
 Bunny Stream API client.
 
@@ -737,3 +738,63 @@ class BunnyPlayer(BaseVideoPlayer):
                 raise JsonHandlerError(502, VIDEO_SERVICE_ERROR_MESSAGE) from exc
         self._reset_bunny_metadata()
         return {}
+
+    @XBlock.json_handler
+    def save_event(self, data, suffix=''):  # pylint: disable=unused-argument
+        """
+        Publish a video player event to the Open edX tracking log (contract §2.5).
+
+        The handler is LMS-only: Studio must not emit viewing events
+        (bunny-api.md §7). The server constructs the payload from platform
+        context and block metadata; the client only supplies ``event_type`` and
+        ``current_time`` (tracking-events.md §1–3, xblock-interface.md §2.3).
+        ``duration`` for Bunny is taken from metadata, not from the request, so
+        a forged client value cannot inflate the completion metric (FR-001-13).
+        """
+        if getattr(self.xblock.runtime, 'is_author_mode', False):
+            raise JsonHandlerError(403, _('Тільки у LMS доступно.'))
+
+        if not isinstance(data, dict):
+            raise JsonHandlerError(400, _('Неправильний формат запиту.'))
+
+        event_type = data.get('event_type')
+        if event_type not in {'play', 'pause', 'complete'}:
+            raise JsonHandlerError(400, _(
+                'Тип події має бути одним із: play, pause, complete.'
+            ))
+
+        current_time = data.get('current_time')
+        if isinstance(current_time, bool) or not isinstance(current_time, (int, float)):
+            raise JsonHandlerError(400, _('current_time має бути числом.'))
+
+        try:
+            user_service = self.xblock.runtime.service(self.xblock, 'user')
+            if user_service is None:
+                return {'result': 'success'}
+            user = user_service.get_current_user()
+            user_id = user.opt_attrs.get('edx-platform.user_id')
+            if user_id is None:
+                return {'result': 'success'}
+        except Exception:
+            return {'result': 'success'}
+
+        config = load_bunny_config(DEFAULT_CONFIG_PATH)
+        payload = {
+            'user_id': user_id,
+            'course_id': str(self.xblock.scope_ids.usage_id.context_key),
+            'unit_usage_key': str(self.xblock.scope_ids.usage_id),
+            'video_ref': {
+                'source_type': 'bunny',
+                'video_id': self.xblock.metadata.get('bunny_video_id'),
+            },
+            'event_type': event_type,
+            'current_time': current_time,
+            'duration': self.xblock.metadata.get('bunny_length_seconds'),
+            'config_version': config['version'],
+        }
+        self.xblock.runtime.publish(
+            self.xblock,
+            'xblock-video.player.{}'.format(event_type),
+            payload,
+        )
+        return {'result': 'success'}

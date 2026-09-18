@@ -2,7 +2,7 @@
 
 <!-- ГЕНЕРУЄТЬСЯ scripts/trace.py — не редагувати вручну -->
 
-Вимог: **16** · задач: **39** (виконано 32) · вимог у роботі: **6** · порушень: **0**
+Вимог: **16** · задач: **39** (виконано 33) · вимог у роботі: **6** · порушень: **0**
 
 ## 001-bunny-video
 
@@ -19,10 +19,10 @@
 | `FR-001-09` | Посилання на захищене відео MUST бути підписане токеном з обмеженим терміном дії; після спливу терміну доступ  | `T-004`, `T-005`, `T-006`, `T-007`, `T-012`, `T-013`, `T-024`, `T-025` | `video_xblock/video_xblock/bunny_config.yaml`, `video_xblock/video_xblock/bunny_config.py`, `video_xblock/video_xblock/backends/bunny.py` | `video_xblock/video_xblock/tests/unit/test_bunny_config.py`, `video_xblock/video_xblock/tests/unit/test_upload_credentials.py`, `video_xblock/video_xblock/tests/unit/test_bunny_api_client.py`, `video_xblock/video_xblock/tests/unit/test_student_view.py`, `video_xblock/video_xblock/tests/unit/test_bunny_api_client_signing.py` |
 | `FR-001-10` | Якщо відео недоступне (видалене, помилка відтворення), учень MUST бачити зрозуміле повідомлення про недоступні | `T-030`, `T-031` | `video_xblock/video_xblock/backends/bunny.py` | `video_xblock/video_xblock/tests/unit/test_unavailable.py` |
 | `FR-001-11` | Вчитель MUST мати змогу вставити відео за готовим посиланням YouTube або Vimeo; таке відео відтворюється в пле | `T-036`, `T-037`, `T-039` | — | — |
-| `FR-001-12` | Плеєр MUST фіксувати події перегляду: початок відтворення, пауза/продовження, повний перегляд. | `T-034`, `T-035` | — | — |
-| `FR-001-13` | Кожна подія перегляду MUST бути прив'язана до конкретного учня, юніту і мітки часу. | `T-034`, `T-035` | — | — |
+| `FR-001-12` | Плеєр MUST фіксувати події перегляду: початок відтворення, пауза/продовження, повний перегляд. | `T-034`, `T-035` | `video_xblock/video_xblock/backends/bunny.py` | `video_xblock/video_xblock/tests/unit/test_save_event.py` |
+| `FR-001-13` | Кожна подія перегляду MUST бути прив'язана до конкретного учня, юніту і мітки часу. | `T-034`, `T-035` | `video_xblock/video_xblock/backends/bunny.py` | `video_xblock/video_xblock/tests/unit/test_save_event.py` |
 | `FR-001-14` | Повний перегляд MUST зараховуватися лише якщо відтворено щонайменше 95 % тривалості відео, а не лише його кіне | `T-004`, `T-005`, `T-024`, `T-032`, `T-033` | `video_xblock/video_xblock/bunny_config.yaml`, `video_xblock/video_xblock/bunny_config.py`, `video_xblock/video_xblock/backends/bunny.py` | `video_xblock/video_xblock/tests/unit/test_bunny_config.py`, `video_xblock/video_xblock/tests/unit/test_student_view.py` |
-| `FR-001-15` | Події перегляду MUST накопичуватися так, щоб частка повних переглядів по кожному юніту була доступна в звіті н | `T-034`, `T-035` | — | — |
+| `FR-001-15` | Події перегляду MUST накопичуватися так, щоб частка повних переглядів по кожному юніту була доступна в звіті н | `T-034`, `T-035` | `video_xblock/video_xblock/backends/bunny.py` | `video_xblock/video_xblock/tests/unit/test_save_event.py` |
 | `FR-001-16` | Вчитель MUST мати змогу видалити або замінити відео в юніті; це не повинно впливати на події перегляду інших ю | `T-022`, `T-023` | `video_xblock/video_xblock/backends/bunny.py` | `video_xblock/video_xblock/tests/unit/test_delete_video.py` |
 
 ## Критичні задачі
@@ -32,4 +32,4 @@
 - `T-015` (001-bunny-video) — виконано
 - `T-025` (001-bunny-video) — виконано
 - `T-033` (001-bunny-video) — виконано
-- `T-035` (001-bunny-video) — у роботі
+- `T-035` (001-bunny-video) — виконано
