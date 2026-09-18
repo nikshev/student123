@@ -84,8 +84,10 @@
 
 ## Phase 7: Polish
 
-- [ ] T-038 [FR-001-01] Прогнати весь набір: pytest `video_xblock/tests/unit/` + jest `video_xblock/tests/js/` + `python3 scripts/trace.py --check` — усе зелене; згенерувати `docs/traceability.md` (`python3 scripts/trace.py`).
+- [x] T-038 [FR-001-01] Прогнати весь набір: pytest `video_xblock/tests/unit/` + jest `video_xblock/tests/js/` + `python3 scripts/trace.py --check` — усе зелене; згенерувати `docs/traceability.md` (`python3 scripts/trace.py`).
+  результат: pytest 282 passed / 1 skipped, jest 42 passed, trace ok, docs/traceability.md згенеровано
 - [ ] T-039 [FR-001-11] Регресія: наявний сьют форка (YouTube/Vimeo/інші бекенди) зелений; пройти quickstart.md S1–S15 як чек-лист ручної перевірки (не автоматизується — живі сервіси; S13 — конституційний гейт, рішення людини).
+  стан: автоматизована частина виконана — повний unit-сьют (282 passed) містить регресію бекендів форка (test_backends.py YouTube/Vimeo/інші); Selenium-acceptance (test_video_player.py) у цьому середовищі не запускається (потрібні браузер/workbench); ручний чек-лист S1–S15 і гейт S13 — за людиною
 
 ---
 
