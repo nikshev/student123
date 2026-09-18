@@ -2,6 +2,7 @@
 # impl: FR-001-02, FR-001-05, FR-001-09
 # impl: FR-001-03, FR-001-09
 # impl: FR-001-06
+# impl: FR-001-16
 """
 Bunny Stream API client.
 
@@ -389,20 +390,40 @@ class BunnyPlayer(BaseVideoPlayer):
             ).format(limit=max_upload_bytes))
 
         client = BunnyApiClient.from_settings(config)
+        # Replace path (FR-001-16): a new upload over an existing video deletes
+        # the old video id first, so no orphan is left in Bunny (data-model.md
+        # §1). The block's own stored id is used, never a client-supplied value.
+        old_video_id = self.xblock.metadata.get('bunny_video_id')
+        old_video_deleted = False
         try:
+            if old_video_id:
+                client.delete_video(old_video_id)
+                old_video_deleted = True
             created = client.create_video(file_name)
             signature = client.sign_upload(created['guid'])
         except ApiClientError as exc:
+            if old_video_deleted:
+                # The old object is already gone from Bunny, so the block must
+                # not keep referencing the dead guid: reset to the truthful
+                # EMPTY state (every metadata key cleared, status EMPTY —
+                # data-model.md §1) before surfacing the error to the client.
+                self._reset_bunny_metadata()
             raise JsonHandlerError(502, VIDEO_SERVICE_ERROR_MESSAGE) from exc
 
         self.xblock.metadata.update({
             'bunny_video_id': created['guid'],
             'bunny_library_id': client.library_id,
             'bunny_status': 'UPLOADING',
+            # Replace path (FR-001-16): the new object starts UPLOADING, so any
+            # duration left over from the previous READY video must be cleared
+            # (data-model.md §1), and the fresh TUS signature expiry replaces
+            # the stale one used by the resume logic in the UI.
+            'bunny_length_seconds': None,
             'bunny_title': file_name,
             'source_type': 'bunny',
             'token_protected': True,
             'config_version': config['version'],
+            'upload_signature_expires': signature['authorization_expire'],
         })
         return {
             'video_id': created['guid'],
@@ -536,3 +557,39 @@ class BunnyPlayer(BaseVideoPlayer):
         if state == 'READY':
             response['length'] = length
         return response
+
+    def _reset_bunny_metadata(self):
+        """
+        Clear every bunny metadata key and return the block to the EMPTY state.
+
+        All nine keys declared by ``metadata_fields()`` (data-model.md §1) are
+        dropped so no stale reference survives a delete/replace, and only
+        ``bunny_status`` reads EMPTY. An incomplete cleanup — any single key
+        left behind — would let the block linger in a wrong state.
+        """
+        reset = {field: None for field in self.metadata_fields()}
+        reset['bunny_status'] = 'EMPTY'
+        self.xblock.metadata.update(reset)
+
+    @XBlock.json_handler
+    def delete_video(self, data, suffix=''):  # pylint: disable=unused-argument
+        """
+        Delete the block's video in Bunny and return the block to EMPTY (§2.4).
+
+        The video id is taken from the block metadata, never from the request
+        body (contracts/xblock-interface.md §2.4), and the DELETE goes through
+        ``BunnyApiClient``. A repeated delete of an already-missing video is an
+        idempotent success (bunny-api.md §4), and the block is reset to EMPTY
+        regardless. A block that already has no video id is simply reset
+        without any Bunny call.
+        """
+        config = load_bunny_config(DEFAULT_CONFIG_PATH)
+        video_id = self.xblock.metadata.get('bunny_video_id')
+        if video_id:
+            client = BunnyApiClient.from_settings(config)
+            try:
+                client.delete_video(video_id)
+            except ApiClientError as exc:
+                raise JsonHandlerError(502, VIDEO_SERVICE_ERROR_MESSAGE) from exc
+        self._reset_bunny_metadata()
+        return {}

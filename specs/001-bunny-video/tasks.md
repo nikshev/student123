@@ -45,7 +45,7 @@
 - [x] T-020 [FR-001-06] Напиши тест `video_xblock/tests/unit/test_bunny_metadata.py` (`verifies: FR-001-06`): `metadata_fields()` повертає точно список з data-model.md §1; експорт OLX блоку з READY-відео не містить секретів (API key, token key) і підписаного URL плеєра (інваріанти data-model); запусти, переконайся, що червоний з очікуваної причини (метод відсутній).
 - [x] T-021 [FR-001-06] Створи `metadata_fields()` та інваріанти у `video_xblock/backends/bunny.py` (`BunnyPlayer`): без секретів, без збереженого підписаного URL — відео живе тільки в Bunny, на сервері лише метадані (FR-001-06); маркер `impl: FR-001-06`; тест T-020 зелений.
 - [x] T-022 [FR-001-16] Напиши тест `video_xblock/tests/unit/test_delete_video.py` (`verifies: FR-001-16`): хендлер `delete_video` викликає DELETE (фікстура 200), очищає метадані, стан EMPTY; повторний DELETE на неіснуюче (фікстура 404) — успіх (ідемпотентно); replace: create_upload поверх READY → старий GUID видалено; запусти, переконайся, що червоний з очікуваної причини (хендлер відсутній).
-- [ ] T-023 [FR-001-16] Створи хендлер `delete_video` і replace-шлях у `create_upload` у `video_xblock/backends/bunny.py` (старий video_id → DELETE перед новим; події перегляду інших юнітів не чіпаються — вони адресують свій usage_key, data-model §1); маркер `impl: FR-001-16`; тест T-022 зелений.
+- [x] T-023 [FR-001-16] Створи хендлер `delete_video` і replace-шлях у `create_upload` у `video_xblock/backends/bunny.py` (старий video_id → DELETE перед новим; події перегляду інших юнітів не чіпаються — вони адресують свій usage_key, data-model §1); маркер `impl: FR-001-16`; тест T-022 зелений.
 
 ## Phase 4: User Story 2 (P1) — учень дивиться відео; посилання не перевикористовується
 
@@ -154,3 +154,4 @@ MVP = Setup + Foundational + US1 + US2 (T-001..T-031). US3/US4 — P2/P3, не �
 escalated: T-008 implementer->implementer-senior, reason=спроба 1: 5 тестів зелені до коду (локальні helpers); спроба 2: таймаут без змін
 escalated: T-020 implementer->implementer-senior, reason=спроба 1: питання замість тесту; спроба 2: OLX-тест зелений до коду (нічого не доводить)
 note: T-021 фікс теж на deepseek-v4-pro — stealth/union-alpha повертає OpenRouter server error після поповнення; gpt-5.6-sol працює
+escalated: T-023 implementer->implementer-senior, reason=reviewer 2× CHANGES_REQUESTED: replace-error-path лишає блок у READY з мертвим GUID замість EMPTY
