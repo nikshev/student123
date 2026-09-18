@@ -3,6 +3,7 @@
 # impl: FR-001-03, FR-001-09
 # impl: FR-001-06
 # impl: FR-001-16
+# impl: FR-001-07
 """
 Bunny Stream API client.
 
@@ -32,6 +33,7 @@ import time
 
 import requests
 from django.conf import settings
+from webob import Response
 from xblock.core import XBlock
 from xblock.exceptions import JsonHandlerError
 
@@ -407,6 +409,42 @@ class BunnyPlayer(BaseVideoPlayer):
             'signed_embed_url': signed_url,
             'config_version': config['version'],
         }
+
+    def _local_resource_url(self, path):
+        """
+        Return an XBlock-local static URL, with a deterministic unit-test fallback.
+
+        Production runtimes expose ``runtime.local_resource_url`` for static
+        assets. ``TestRuntime`` deliberately leaves it unimplemented, so the
+        fallback is a relative URL that keeps tests offline and still names the
+        resource the student view must load. Missing future assets (notably the
+        T-033 Bunny bridge) are therefore referenced, not read from disk here.
+        """
+        try:
+            return self.xblock.runtime.local_resource_url(self.xblock, path)
+        except (AttributeError, NotImplementedError):
+            return path
+
+    def get_player_html(self, **context):
+        """
+        Render the Bunny student player iframe and its local bridge scripts.
+
+        ``VideoXBlock.render_player`` reaches this method through the public
+        student-view handler. Unlike the video.js backends, Bunny embeds the
+        Stream iframe directly from the freshly signed URL produced by
+        ``player_data_setup`` and loads only vendored/local JavaScript: player.js
+        plus the Bunny bridge that will be implemented by T-033. No absolute
+        navigation target other than the configured embed origin is introduced.
+        """
+        context.update(self.player_data_setup(context))
+        context.update({
+            'playerjs_url': self._local_resource_url('static/js/lib/playerjs.min.js'),
+            'bunny_player_js_url': self._local_resource_url('static/js/student/bunny_player.js'),
+        })
+        return Response(
+            self.render_template('bunny_student_view.html', **context),
+            content_type='text/html',
+        )
 
     @XBlock.json_handler
     def create_upload(self, data, suffix=''):  # pylint: disable=unused-argument

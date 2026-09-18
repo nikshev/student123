@@ -1,0 +1,15 @@
+<div class="bunny-video-player" data-video-id="{{ bunny_video_id }}" data-config-version="{{ config_version }}">
+    <iframe
+        id="{{ video_player_id }}"
+        class="bunny-video-iframe"
+        src="{{ signed_embed_url }}"
+        frameborder="0"
+        scrolling="no"
+        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+        allowfullscreen
+        referrerpolicy="strict-origin-when-cross-origin"
+        title="Video Content"
+    ></iframe>
+</div>
+<script src="{{ playerjs_url }}"></script>
+<script src="{{ bunny_player_js_url }}"></script>
