@@ -1,3 +1,4 @@
+# impl: FR-001-01
 """
 Backend classes are responsible for video platform specific logic.
 
@@ -119,6 +120,10 @@ class BaseVideoPlayer(Plugin):
             self.basic_fields, self.advanced_fields, self.trans_fields,
             self.three_pm_fields
         ))
+
+    def studio_context(self):
+        """Additional backend-owned context for the Studio editor."""
+        return {}
 
     @property
     def basic_fields(self):

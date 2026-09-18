@@ -1,3 +1,4 @@
+# impl: FR-001-01
 """
 Lists of constants that can be used in the video xblock.
 """
@@ -28,6 +29,7 @@ class PlayerName:
     WISTIA = 'wistia-player'
     YOUTUBE = 'youtube-player'
     TENCENT = 'tencent-player'
+    BUNNY = 'bunny'
 
 
 class TranscriptSource:

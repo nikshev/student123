@@ -1,7 +1,23 @@
+{# impl: FR-001-01 #}
 {% load video_xblock_tags %}
 
 <div class="editor-with-buttons">
     <div class="wrapper-comp-settings is-active editor-with-buttons" id="settings-tab">
+        {% if player_name == players.DUMMY or player_name == players.BUNNY %}
+            <ul class="list-input settings-list basic">
+                <li class="field comp-setting-entry metadata_entry is-set" data-field-name="player_name" data-cast="string">
+                    <label class="label setting-label" for="xb-field-edit-player_name">{% trans "Джерело відео" %}</label>
+                    <select class="field-data-control" id="xb-field-edit-player_name" name="player_name">
+                        <option value="{{ players.DUMMY }}"{% if player_name == players.DUMMY %} selected{% endif %}>{% trans "Вставити посилання" %}</option>
+                        <option value="{{ players.BUNNY }}"{% if player_name == players.BUNNY %} selected{% endif %}>{% trans "Завантажити відео" %}</option>
+                    </select>
+                    <p class="tip setting-help">{% trans "Щоб змінити джерело, збережіть налаштування та знову відкрийте редактор." %}</p>
+                </li>
+            </ul>
+        {% endif %}
+        {% if studio_tab_template %}
+            {% include studio_tab_template %}
+        {% endif %}
         {% include "studio-edit-tab.html" with name='basic' fields=basic_fields %}
         {% include "studio-edit-tab.html" with name='advanced' fields=advanced_fields %}
     </div>

@@ -1,3 +1,4 @@
+# impl: FR-001-01
 """Setup for video XBlock."""
 
 import os
@@ -65,10 +66,13 @@ setup(
             'dummy-player = video_xblock.backends.dummy:DummyPlayer',
             'vimeo-player = video_xblock.backends.vimeo:VimeoPlayer',
             'html5-player = video_xblock.backends.html5:Html5Player',
+            'bunny = video_xblock.backends.bunny:BunnyPlayer',
         ]
     },
-    package_data=package_data("video_xblock", [
-        "static", "public", "locale", "translations",
-        "backends", "workbench"
-    ]),
+    package_data={
+        "video_xblock": package_data("video_xblock", [
+            "static", "public", "locale", "translations",
+            "backends", "workbench", "templates"
+        ])["video_xblock"] + ["bunny_config.yaml"],
+    },
 )

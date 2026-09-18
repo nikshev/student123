@@ -5,6 +5,7 @@ from copy import deepcopy
 from html import unescape
 from pathlib import Path
 import re
+import json
 from unittest.mock import Mock, patch
 
 from django.template import Engine, Template
@@ -78,6 +79,8 @@ def visible_tree(tree):
     """Exclude non-displayed DOM content, without claiming CSS-layout coverage."""
     tree = deepcopy(tree)
     for node in list(tree.iterdescendants()):
+        if not isinstance(node.tag, str):  # HTML comments have no attributes.
+            continue
         style = re.sub(r'\s+', '', node.get('style', '').lower())
         classes = node.get('class', '').split()
         if (node.tag in ('script', 'style', 'template')
@@ -161,3 +164,101 @@ def test_studio_context_exposes_upload_limits_from_yaml(block, use_sentinel):
     assert 'bunny_config' in context, 'Real studio_view must supply bunny_config'
     assert context['bunny_config']['max_upload_bytes'] == expected['max_upload_bytes']
     assert context['bunny_config']['allowed_extensions'] == expected['allowed_extensions']
+
+
+@pytest.mark.parametrize('state, message', [
+    ('UPLOADING', 'Завантажується'),
+    ('PROCESSING', 'Обробляється'),
+    ('ERROR', 'Помилка'),
+])
+def test_studio_tab_intermediate_and_error_states(block, state, message):
+    block.metadata['bunny_status'] = state
+    tree, context = render_studio_tab(block)
+    visible = visible_tree(tree)
+    assert context['bunny_status'] == state
+    assert message in visible.text_content()
+    assert not visible.xpath('.//*[@class="bunny-duration"]')
+    if state == 'UPLOADING':
+        assert visible.xpath('.//progress')
+    if state == 'ERROR':
+        buttons = [button.text_content() for button in visible.xpath('.//button[not(@disabled)]')]
+        assert 'Повторити' in buttons
+        assert 'Видалити' in buttons
+
+
+def test_empty_studio_tab_offers_link_button(block):
+    tree, _ = render_studio_tab(block)
+    assert 'Вставити посилання' in [
+        button.text_content() for button in visible_tree(tree).xpath('.//button[not(@disabled)]')
+    ]
+
+
+@pytest.fixture
+def real_block():
+    """Keep real player resolution, rendering, cleaning and save validation.
+
+    The editable install predates the new setup.py entry point; supply only that
+    registration in the SDK cache, not a get_player/render/save replacement.
+    """
+    case = base.VideoXBlockTestBase()
+    case.setUp()
+    xblock = case.xblock
+    xblock.metadata = {}
+    xblock.scope_ids.usage_id = 'studio-video'
+    xblock.runtime.handler_url = Mock(return_value='/handler/download_transcript')
+    try:
+        with patch.dict('xblock.plugin.PLUGIN_CACHE', {('video_xblock.v1', 'bunny'): BunnyPlayer}), \
+                patch.object(xblock, '_update_default_transcripts', return_value=([], '')), \
+                patch('requests.sessions.Session.request', side_effect=AssertionError('Network forbidden')):
+            yield xblock
+    finally:
+        case.tearDown()
+
+
+def save_studio(block, values):
+    request = base.arrange_request_mock(json.dumps({'values': values, 'defaults': []}))
+    response = block.submit_studio_edits(request)
+    assert response.status_int == 200, response.text
+    assert response.json == {'result': 'success'}
+
+
+def test_initial_studio_can_select_save_and_reopen_bunny(real_block):
+    assert real_block.player_name == 'dummy-player'
+    tree = visible_tree(html.fragment_fromstring(real_block.studio_view({}).content, create_parent='div'))
+    # Existing Studio JS serializes field-data-control inside a typed li wrapper.
+    choices = tree.xpath('.//li[@data-field-name="player_name"]//select[contains(@class, "field-data-control")]')
+    assert choices, 'Initial Studio must expose a source selector wired to the existing form serializer'
+    selector = choices[0]
+    assert selector.xpath('./option[@value="bunny"]'), 'Author must be able to select Bunny'
+    wrapper = selector.xpath('ancestor::li[1]')[0]
+    assert wrapper.get('data-cast') == 'string'
+    assert 'is-set' in wrapper.get('class', '').split()
+    save_studio(real_block, {wrapper.get('data-field-name'): 'bunny', 'display_name': 'Лекція'})
+    assert real_block.player_name == 'bunny'
+    assert real_block.href == ''
+    assert isinstance(real_block.get_player(), BunnyPlayer)
+    tree, _ = render_studio_tab(real_block)
+    assert 'Завантажити' in visible_tree(tree).text_content()
+    assert real_block.display_name == 'Лекція'
+
+
+@pytest.mark.parametrize('explicit_selection', [False, True])
+def test_bunny_studio_save_without_href_preserves_metadata(real_block, explicit_selection):
+    ready = VIDEO_INFO_STATUSES[4]['body']
+    real_block.player_name = 'bunny'
+    real_block.metadata = {
+        'bunny_status': 'READY', 'bunny_video_id': ready['guid'],
+        'bunny_length_seconds': ready['length'], 'bunny_title': ready['title'],
+        'config_version': '1.0.0', 'source_type': 'bunny', 'token_protected': True,
+    }
+    before = deepcopy(real_block.metadata)
+    values = {'display_name': 'Оновлена лекція'}
+    if explicit_selection:
+        values['player_name'] = 'bunny'
+    save_studio(real_block, values)
+    assert real_block.player_name == 'bunny'
+    assert real_block.href == ''
+    assert real_block.metadata == before
+    assert real_block.display_name == values['display_name']
+    tree, _ = render_studio_tab(real_block)
+    assert 'Готово' in visible_tree(tree).text_content()

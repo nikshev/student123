@@ -1,3 +1,4 @@
+# impl: FR-001-01
 """
 Video xblock helpers.
 """
@@ -50,7 +51,10 @@ def render_template(template_name, **context):
 
     Returns: django.utils.safestring.SafeText
     """
-    template_dirs = [os.path.join(os.path.dirname(__file__), 'static/html')]
+    template_dirs = [
+        os.path.join(os.path.dirname(__file__), directory)
+        for directory in ('static/html', 'templates')
+    ]
     libraries = {'video_xblock_tags': 'video_xblock.templatetags'}
     engine = Engine(dirs=template_dirs, debug=True, libraries=libraries)
     html_template = engine.get_template(template_name)
