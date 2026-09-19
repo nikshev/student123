@@ -426,7 +426,7 @@ class TestTutorServiceClientContract:
         
         assert result.status == "off_topic"
         assert result.sources == []
-        assert "межах теми" in result.answer.lower()
+        assert "за межі теми" in result.answer.lower()
     
     def test_ask_with_existing_conversation_id_sends_it(self, client):
         """ask() with existing conversation_id sends it in request."""

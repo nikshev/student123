@@ -23,7 +23,7 @@ if str(ROOT) not in sys.path:
 
 
 # Configure Django settings before any Django imports
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tests.test_settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ai_tutor_test_settings")
 
 import django  # noqa: E402
 django.setup()  # noqa: E402
