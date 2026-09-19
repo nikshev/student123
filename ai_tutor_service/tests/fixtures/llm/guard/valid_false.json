@@ -1,0 +1,10 @@
+{
+  "contains_solution": false,
+  "reason": "Відповідь пояснює метод розв'язання кроками, але не надає кінцевої відповіді.",
+  "usage": {
+    "input_tokens": 234,
+    "output_tokens": 42
+  },
+  "model_id": "anthropic/claude-3-5-haiku-latest",
+  "finish_reason": "stop"
+}

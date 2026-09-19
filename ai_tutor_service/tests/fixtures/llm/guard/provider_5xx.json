@@ -1,0 +1,8 @@
+{
+  "error": {
+    "type": "api_error",
+    "message": "Model overloaded",
+    "code": 503
+  },
+  "status_code": 503
+}

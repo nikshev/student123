@@ -1,0 +1,11 @@
+{
+  "classification": "on_topic",
+  "confidence": 0.92,
+  "top_source_label": "equations",
+  "usage": {
+    "input_tokens": 187,
+    "output_tokens": 15
+  },
+  "model_id": "anthropic/claude-3-5-haiku-latest",
+  "finish_reason": "stop"
+}

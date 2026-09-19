@@ -1,0 +1,7 @@
+{
+  "error": {
+    "type": "timeout",
+    "message": "Off-topic classification timed out"
+  },
+  "status_code": 408
+}

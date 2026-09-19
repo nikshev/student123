@@ -1,0 +1,5 @@
+{
+  "text": "Ось пояснення: ",
+  "model_id": "anthropic/claude-3-5-haiku-latest",
+  "finish_reason": "stop"
+}

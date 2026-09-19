@@ -1,0 +1,8 @@
+{
+  "error": {
+    "type": "api_error",
+    "message": "Rate limit exceeded",
+    "code": 429
+  },
+  "status_code": 429
+}

@@ -1,0 +1,7 @@
+{
+  "error": {
+    "type": "timeout",
+    "message": "Guard request timed out after 7 seconds"
+  },
+  "status_code": 408
+}

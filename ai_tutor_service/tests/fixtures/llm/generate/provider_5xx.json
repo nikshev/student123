@@ -1,0 +1,8 @@
+{
+  "error": {
+    "type": "api_error",
+    "message": "Internal server error",
+    "code": 500
+  },
+  "status_code": 500
+}

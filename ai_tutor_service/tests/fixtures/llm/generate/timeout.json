@@ -1,0 +1,7 @@
+{
+  "error": {
+    "type": "timeout",
+    "message": "Request timed out after 30 seconds"
+  },
+  "status_code": 408
+}

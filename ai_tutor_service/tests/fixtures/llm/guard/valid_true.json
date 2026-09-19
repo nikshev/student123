@@ -1,0 +1,10 @@
+{
+  "contains_solution": true,
+  "reason": "Містить кінцеве значення змінної для заданого завдання: x = 3.",
+  "usage": {
+    "input_tokens": 256,
+    "output_tokens": 38
+  },
+  "model_id": "anthropic/claude-3-5-haiku-latest",
+  "finish_reason": "stop"
+}
