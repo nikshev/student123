@@ -26,21 +26,16 @@ DATABASES = {
     }
 }
 
-# Disable migrations for faster tests
-class DisableMigrations:
-    def __contains__(self, item):
-        return True
-
-    def __getitem__(self, item):
-        return None
-
-MIGRATION_MODULES = DisableMigrations()
-
-# Installed apps - minimal set
+# Installed apps - all ai_tutor_service sub-apps
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.auth",
     "ai_tutor_service",
+    "ai_tutor_service.materials",
+    "ai_tutor_service.conversations",
+    "ai_tutor_service.guard",
+    "ai_tutor_service.limits",
+    "ai_tutor_service.providers",
 ]
 
 # Use default auto field
