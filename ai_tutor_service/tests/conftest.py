@@ -10,6 +10,12 @@ from pathlib import Path
 import pytest
 
 
+# Ensure the repo root (parent of tests/) is on sys.path for "tests.test_settings" import
+# This MUST be done before setting DJANGO_SETTINGS_MODULE
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 # Ensure the package root is on sys.path for imports
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
@@ -17,10 +23,10 @@ if str(ROOT) not in sys.path:
 
 
 # Configure Django settings before any Django imports
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_test")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tests.test_settings")
 
-import django
-django.setup()
+import django  # noqa: E402
+django.setup()  # noqa: E402
 
 
 # === Network deny-by-default ===

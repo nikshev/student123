@@ -10,53 +10,23 @@ from pathlib import Path
 import pytest
 
 
+# Ensure the repo root (parent of tests/) is on sys.path for "tests.test_settings" import
+# This MUST be done before setting DJANGO_SETTINGS_MODULE
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 # Ensure the package root is on sys.path for imports
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 
-# Minimal Django configuration for XBlock tests (no full Django project needed)
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings_test_xblock")
+# Configure Django settings before any Django imports
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tests.test_settings")
 
-# Create minimal Django settings inline
-from django.conf import settings
-
-if not settings.configured:
-    settings.configure(
-        SECRET_KEY="test-secret-key-not-for-production",
-        DEBUG=True,
-        TEMPLATES=[
-            {
-                "BACKEND": "django.template.backends.django.DjangoTemplates",
-                "DIRS": [],
-                "APP_DIRS": True,
-                "OPTIONS": {},
-            },
-        ],
-        DATABASES={
-            "default": {
-                "ENGINE": "django.db.backends.sqlite3",
-                "NAME": ":memory:",
-            }
-        },
-        INSTALLED_APPS=[
-            "django.contrib.contenttypes",
-            "django.contrib.auth",
-            "ai_tutor_xblock",
-        ],
-        DEFAULT_AUTO_FIELD="django.db.models.BigAutoField",
-        LOGGING={
-            "version": 1,
-            "disable_existing_loggers": False,
-            "handlers": {"null": {"class": "logging.NullHandler"}},
-            "root": {"handlers": ["null"]},
-            "loggers": {"django": {"handlers": ["null"], "propagate": False}},
-        },
-    )
-
-import django
-django.setup()
+import django  # noqa: E402
+django.setup()  # noqa: E402
 
 
 # === Network deny-by-default ===
