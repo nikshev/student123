@@ -5,12 +5,14 @@ DailyCounter and IdempotencyRecord models for AI Tutor Service.
 DailyCounter: composite PK user_id+date_utc, accepted_count atomic 0..daily_limit,
 never decreases. Limit reserved atomically before paid LLM call.
 
-IdempotencyRecord: request_id PK, user_id, response_hash, created_at.
+IdempotencyRecord: request_id PK, user_id, payload_hash, response, created_at.
 """
 
+import json
 import uuid
 from django.db import models
 from django.core.validators import MinValueValidator
+from django.core.exceptions import ValidationError
 
 
 class DailyCounter(models.Model):
@@ -52,11 +54,13 @@ class IdempotencyRecord(models.Model):
     """
     Idempotency record for request deduplication.
     request_id is the primary key.
+    Stores payload_hash and serialized response for durable idempotency.
     """
 
     request_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user_id = models.CharField(max_length=255, blank=False, null=False)
-    response_hash = models.CharField(max_length=64, blank=False, null=False)  # SHA-256 hex
+    payload_hash = models.CharField(max_length=64, blank=False, null=False)  # SHA-256 hex
+    response = models.JSONField(blank=False, null=False)  # serialized response
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -70,5 +74,7 @@ class IdempotencyRecord(models.Model):
 
     def clean(self):
         super().clean()
-        if not self.response_hash or not self.response_hash.strip():
-            raise ValidationError({"response_hash": "Response hash cannot be empty."})
+        if not self.payload_hash or not self.payload_hash.strip():
+            raise ValidationError({"payload_hash": "Payload hash cannot be empty."})
+        if self.response is None:
+            raise ValidationError({"response": "Response cannot be null."})

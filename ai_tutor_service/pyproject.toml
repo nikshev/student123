@@ -18,3 +18,4 @@ addopts = "-p no:warnings"
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]
+django_settings_module = "ai_tutor_test_settings"

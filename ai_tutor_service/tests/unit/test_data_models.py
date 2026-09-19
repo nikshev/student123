@@ -184,8 +184,14 @@ class TestMaterialSegmentModel:
         constraints = MaterialSegment._meta.constraints
         unique_constraints = [c for c in constraints if isinstance(c, models.UniqueConstraint)]
         fields_sets = {tuple(c.fields) for c in unique_constraints}
-        assert ("material_id", "ordinal") in fields_sets or \
-               ("ordinal", "material_id") in fields_sets
+        # Per contract §3: transcript[0] and notes[0] both have ordinal 0
+        # Unique within (material_id, kind), not just material_id
+        assert ("material_id", "kind", "ordinal") in fields_sets or \
+               ("material_id", "ordinal", "kind") in fields_sets or \
+               ("kind", "material_id", "ordinal") in fields_sets or \
+               ("kind", "ordinal", "material_id") in fields_sets or \
+               ("ordinal", "material_id", "kind") in fields_sets or \
+               ("ordinal", "kind", "material_id") in fields_sets
 
     def test_material_segment_ordinal_non_negative(self):
         _, MaterialSegment = _get_material_models()
@@ -552,7 +558,8 @@ class TestIdempotencyRecordModel:
         field_names = {f.name for f in IdempotencyRecord._meta.get_fields()}
         assert "request_id" in field_names
         assert "user_id" in field_names
-        assert "response_hash" in field_names
+        assert "payload_hash" in field_names
+        assert "response" in field_names
         assert "created_at" in field_names
 
     def test_idempotency_record_request_id_pk(self):
@@ -567,9 +574,15 @@ class TestIdempotencyRecordModel:
         assert field.blank is False
         assert field.null is False
 
-    def test_idempotency_record_response_hash_required(self):
+    def test_idempotency_record_payload_hash_required(self):
         _, IdempotencyRecord = _get_limits_models()
-        field = IdempotencyRecord._meta.get_field("response_hash")
+        field = IdempotencyRecord._meta.get_field("payload_hash")
+        assert field.blank is False
+        assert field.null is False
+
+    def test_idempotency_record_response_required(self):
+        _, IdempotencyRecord = _get_limits_models()
+        field = IdempotencyRecord._meta.get_field("response")
         assert field.blank is False
         assert field.null is False
 

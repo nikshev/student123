@@ -58,6 +58,16 @@ def _disable_network(monkeypatch):
     # Restore after test (though monkeypatch handles this automatically)
 
 
+# Enable database access for all tests (pytest-django)
+@pytest.fixture(autouse=True)
+def _enable_db(db):
+    """
+    Autouse fixture that enables database access for all tests.
+    Uses pytest-django's 'db' fixture to set up transactional test database.
+    """
+    pass
+
+
 # === Fixture directories ===
 
 @pytest.fixture(scope="session")

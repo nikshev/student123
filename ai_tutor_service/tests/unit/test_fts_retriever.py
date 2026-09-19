@@ -181,13 +181,15 @@ class TestRetrieverSearch:
             repository,
             unit_usage_key=TEST_UNIT_USAGE_KEY,
             transcript_text="Unit 1 content about multiplication rules.",
+            notes_text="Notes about multiplication.",
         )
 
-        # Create material in neighbor unit 2
+        # Create material in neighbor unit 2 with DIFFERENT notes text
         material_id_2 = self._create_test_material(
             repository,
             unit_usage_key=NEIGHBOR_UNIT_USAGE_KEY,
             transcript_text="Unit 2 content about division rules.",
+            notes_text="Notes about division.",  # Different from unit 1
         )
 
         # Search in unit 1 for "multiplication"
@@ -283,12 +285,14 @@ class TestRetrieverSearch:
         assert scores == sorted(scores, reverse=True), "Results not sorted by rank_score desc"
 
     # Helper methods for test data setup (will work when repository exists)
-    def _create_test_material(self, repository, unit_usage_key=None, transcript_text=None):
+    def _create_test_material(self, repository, unit_usage_key=None, transcript_text=None, notes_text=None):
         """Create a test material with segments via repository."""
         if unit_usage_key is None:
             unit_usage_key = TEST_UNIT_USAGE_KEY
         if transcript_text is None:
             transcript_text = "Multiplication rules: negative times negative equals positive."
+        if notes_text is None:
+            notes_text = "Notes about multiplication."
 
         # This will fail until repository is implemented (T-018)
         return repository.create_material(
@@ -305,7 +309,7 @@ class TestRetrieverSearch:
             notes=[{
                 "ordinal": 0,
                 "section_title": "Test Section",
-                "text": "Notes about multiplication.",
+                "text": notes_text,
                 "source_ref": "notes#test-section",
             }],
         )

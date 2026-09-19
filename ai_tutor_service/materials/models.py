@@ -78,12 +78,12 @@ class MaterialSegment(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["material_id", "ordinal"],
-                name="unique_ordinal_per_material",
+                fields=["material_id", "kind", "ordinal"],
+                name="unique_ordinal_per_material_kind",
             ),
         ]
         indexes = [
-            models.Index(fields=["material_id", "ordinal"]),
+            models.Index(fields=["material_id", "kind", "ordinal"]),
             models.Index(fields=["kind"]),
         ]
 
