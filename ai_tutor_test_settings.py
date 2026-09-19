@@ -84,3 +84,18 @@ TIME_ZONE = "UTC"
 # Internationalization
 LANGUAGE_CODE = "en-us"
 USE_I18N = True
+
+# Allowed hosts for test client
+ALLOWED_HOSTS = ["testserver", "localhost", "127.0.0.1"]
+
+# Middleware - Bearer auth middleware MUST run before CommonMiddleware
+MIDDLEWARE = [
+    "ai_tutor_service.api.auth.BearerAuthMiddleware",
+    "django.middleware.common.CommonMiddleware",
+]
+
+# URL configuration for API endpoints
+ROOT_URLCONF = "ai_tutor_service.api.urls"
+
+# Shared secret for Bearer authentication (test value)
+AI_TUTOR_SHARED_SECRET = "test-shared-secret-12345"
