@@ -1,0 +1,2 @@
+# This file ensures the fixtures/llm directory is tracked by git
+# Add LLM response fixtures here for testing
