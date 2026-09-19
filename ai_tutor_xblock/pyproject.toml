@@ -1,0 +1,7 @@
+[project]
+name = "ai-tutor-xblock"
+version = "0.1.0"
+description = "AI Tutor XBlock for Open edX — unit-level AI tutor chat and interaction"
+requires-python = ">=3.11"
+
+[project.scripts]

@@ -1,0 +1,7 @@
+[project]
+name = "ai-tutor-service"
+version = "0.1.0"
+description = "AI Tutor Service for Open edX learning assistant — provides RAG, LLM calls, guard, limits, history and gate endpoints"
+requires-python = ">=3.11"
+
+[project.scripts]
