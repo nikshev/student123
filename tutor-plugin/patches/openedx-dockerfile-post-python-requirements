@@ -1,5 +1,10 @@
-# impl: FR-001-07
+# impl: FR-001-07, FR-002-10
 # XBlock у вимоги образу edx-platform: вендорений форк video_xblock/ з кореня
 # репо копіюється в контекст збірки і встановлюється в образ (див. quickstart S0).
 COPY ./video_xblock /opt/video_xblock
 RUN pip install /opt/video_xblock
+# ai_tutor_service та ai_tutor_xblock для фічі 002
+COPY ./ai_tutor_service /opt/ai_tutor_service
+RUN pip install /opt/ai_tutor_service
+COPY ./ai_tutor_xblock /opt/ai_tutor_xblock
+RUN pip install /opt/ai_tutor_xblock

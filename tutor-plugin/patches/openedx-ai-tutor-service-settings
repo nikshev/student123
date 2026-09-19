@@ -1,0 +1,4 @@
+# impl: FR-002-10
+# Внутрішній service URL для AI Tutor: LMS/XBlock викликають сервіс через
+# Docker-внутрішню мережу. Не локальний хост, не секрет — це deployment-конфіг.
+AI_TUTOR_SERVICE_URL = "http://ai-tutor-service:8001"

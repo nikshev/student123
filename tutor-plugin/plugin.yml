@@ -1,4 +1,4 @@
-# impl: FR-001-07
+# impl: FR-001-07, FR-002-10
 name: video-xblock
 version: 0.1.0
 config:
@@ -6,3 +6,5 @@ config:
     BUNNY_STREAM_LIBRARY_ID: ""
     BUNNY_STREAM_API_KEY: ""
     BUNNY_STREAM_TOKEN_KEY: ""
+    AI_TUTOR_LLM_API_KEY: ""
+    AI_TUTOR_SHARED_SECRET: ""
