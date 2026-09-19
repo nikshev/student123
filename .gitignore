@@ -16,3 +16,6 @@ node_modules/
 
 # OS
 .DS_Store
+
+# Стан інструмента graphify — не в git
+/.graphify/

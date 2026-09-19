@@ -58,9 +58,29 @@ reviewer запускай після завершення implementer.
 | Коли | Агент | Модель |
 |---|---|---|
 | план, data-model, contracts, декомпозиція на задачі | `architect` | openrouter/openai/gpt-5.6-sol |
-| звичайна задача `T-xxx` | `implementer` | openrouter/openai/gpt-oss-120b |
-| задача з міткою `critical:`, або після ескалації | `implementer-senior` | openrouter/moonshotai/kimi-k2.7-code |
-| ревʼю після кожної задачі і перед мержем фічі | `reviewer` | openrouter/moonshotai/kimi-k2.7-code, read-only |
+| рутинна задача `T-xxx`: boilerplate, тести, дрібні правки | `implementer` | openrouter/nvidia/nemotron-3.5-lightning:free |
+| складні фічі, багатофайлові зміни, рефакторинги; задача з міткою `critical:` або після ескалації | `implementer-senior` | openrouter/nvidia/nemotron-3-ultra-550b-a55b:free |
+| ревʼю після кожної задачі і перед мержем фічі | `reviewer` | deepseek/deepseek-v4-pro, read-only |
+
+### Fallback-ланцюги opencode
+
+Якщо модель не відповіла або повернула порожню відповідь, бери наступну в
+ланцюгу. Файли агентів носять тільки основну модель; ланцюг тримається тут.
+
+`implementer-senior`:
+
+1. `openrouter/nvidia/nemotron-3-ultra-550b-a55b:free` — 1M контекст, multi-step reasoning, оркестрація;
+2. `openrouter/thinkingmachines/inkling:free` — 1M контекст, reasoning + мультимодальність;
+3. `openrouter/poolside/laguna-s-2.1:free` — найсильніший чисто кодовий агент free-тіру;
+4. `openrouter/deepseek/deepseek-v4-flash-0731:free` — кодинг/агенти, 1M контекст, Rust;
+5. крайній fallback — `openrouter/moonshotai/kimi-k2.7-code`.
+
+`implementer`:
+
+1. `openrouter/nvidia/nemotron-3.5-lightning:free` — 3B active, high-throughput;
+2. альтернативи: `openrouter/cohere/north-mini-code:free` (64K output) або
+   `openrouter/poolside/laguna-xs-2.1:free`;
+3. крайній fallback — `openrouter/openai/gpt-oss-120b`.
 
 ### Ескалація — автоматична
 

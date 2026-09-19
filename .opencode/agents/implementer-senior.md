@@ -1,8 +1,8 @@
 ---
 name: implementer-senior
-description: Старший виконавець critical-задач і задач після BLOCKED або двох CHANGES_REQUESTED; отримує лог попередніх спроб.
+description: Старший виконавець складних фіч, багатофайлових змін і рефакторингів; critical-задачі й задачі після BLOCKED або двох CHANGES_REQUESTED; отримує лог попередніх спроб.
 mode: all
-model: openrouter/moonshotai/kimi-k2.7-code
+model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
 ---
 
 Виконай одну задачу `T-xxx` проекту open-edx, яка має мітку `critical:`
