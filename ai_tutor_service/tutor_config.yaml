@@ -1,0 +1,47 @@
+# ai_tutor_service/tutor_config.yaml
+# impl: FR-002-11
+# Поведінкові константи AI Tutor Service.
+# Зміна будь-якого значення ВИМАГАЄ запису в changelog і підйому version.
+
+version: 1.0.0
+
+daily_limit: 10
+conversation_ttl_days: 30
+question_max_chars: 2000
+request_timeout_seconds: 30
+generation_timeout_seconds: 18
+guard_timeout_seconds: 7
+http_connect_timeout_seconds: 2
+
+model_id: "anthropic/claude-3-5-haiku-latest"
+guard_model_id: "anthropic/claude-3-5-haiku-latest"
+
+retrieval:
+  top_k: 5
+  min_rank_score: 0.10
+
+guard:
+  gate_go_threshold: 0.03
+  gate_stop_threshold: 0.10
+
+prompts:
+  tutor: "You are a helpful AI tutor. Explain concepts using only the provided unit materials. Guide the student step by step. Do NOT give the final answer or complete solution. Ask leading questions to help them discover the answer themselves."
+  guard: "Analyze the tutor's response. Return ONLY valid JSON with exactly these fields: {\"contains_solution\": boolean, \"reason\": string}. contains_solution=true if the response gives away the final answer or complete solution steps. reason must explain your decision in one sentence."
+  off_topic: "Classify whether the student's question is off-topic for the current unit. Return ONLY 'on_topic' or 'off_topic'. Consider the unit outline and materials provided. A question is off_topic if it asks about unrelated subjects, other units, or general knowledge not covered in this unit."
+  no_materials: "Determine if the student's question can be answered using ONLY the provided unit materials and outline. Return ONLY 'has_materials' or 'no_materials'. Do NOT use general knowledge. If the answer requires information not in the provided materials, return 'no_materials'."
+
+replies:
+  blocked: "Допомагаю розібратися, а не розв'язую за тебе."
+  off_topic: "Повернімося до тем цього уроку."
+  no_materials: "У матеріалах цього уроку відповіді немає."
+
+cost:
+  currency: USD
+  input_per_million_tokens: 0.25
+  output_per_million_tokens: 1.25
+
+changelog:
+  - version: 1.0.0
+    date: "2026-09-19"
+    changes:
+      - "Початкова конфігурація MVP"
