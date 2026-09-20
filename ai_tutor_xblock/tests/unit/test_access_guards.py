@@ -27,13 +27,13 @@ must satisfy exactly this interface):
     TrackingPublisher when result.allow is False.
 
 The tests are red right now for the expected reason: the module
-ai_tutor_xblock.guards does not exist yet (T-024 creates it), so collection
-fails with ModuleNotFoundError.
+ai_tutor_xblock.ai_tutor_xblock.guards does not exist yet (T-024 creates it),
+so collection fails with ModuleNotFoundError.
 """
 
 import pytest
 
-from ai_tutor_xblock.guards import EnrollmentGuard
+from ai_tutor_xblock.ai_tutor_xblock.guards import EnrollmentGuard
 
 
 class StubUser:
