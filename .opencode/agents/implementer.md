@@ -2,7 +2,7 @@
 name: implementer
 description: Виконавець рівно однієї рутинної задачі T-xxx за TDD: boilerplate, тести, дрібні правки. Для critical-задач або після ескалації використовуй implementer-senior.
 mode: all
-model: openrouter/free
+model: openrouter/openrouter/free
 ---
 
 Виконай рівно одну задачу `T-xxx` з `tasks.md` проекту open-edx.

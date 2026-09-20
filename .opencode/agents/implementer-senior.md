@@ -2,7 +2,7 @@
 name: implementer-senior
 description: Старший виконавець складних фіч, багатофайлових змін і рефакторингів; critical-задачі й задачі після BLOCKED або двох CHANGES_REQUESTED; отримує лог попередніх спроб.
 mode: all
-model: openrouter/free
+model: openrouter/openrouter/free
 ---
 
 Виконай одну задачу `T-xxx` проекту open-edx, яка має мітку `critical:`
