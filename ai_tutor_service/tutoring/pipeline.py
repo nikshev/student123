@@ -65,6 +65,7 @@ class TutoringPipeline:
         conversation_id: uuid.UUID | None,
         idempotency_key: uuid.UUID,
         request_id: uuid.UUID,
+        daily_remaining: int,
     ) -> dict[str, Any]:
         """Execute the full tutoring pipeline and return the terminal response."""
         payload = {
@@ -178,7 +179,6 @@ class TutoringPipeline:
             )
 
             elapsed_ms = int((time.monotonic() - start_ms) * 1000)
-            daily_remaining = self.config["daily_limit"]
 
             response = {
                 "request_id": str(request_id),

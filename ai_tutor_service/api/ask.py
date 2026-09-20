@@ -24,10 +24,12 @@ from ai_tutor_service.api.errors import (
     idempotency_conflict,
     make_error_response,
     not_found,
+    quota_exceeded,
     service_unavailable,
     validation_error,
 )
 from ai_tutor_service.config import load_tutor_config
+from ai_tutor_service.limits.service import DailyQuota, QuotaExceededError
 from ai_tutor_service.providers.client import LLMError
 from ai_tutor_service.tutoring.pipeline import (
     ActorMismatchError,
@@ -95,6 +97,15 @@ class AskView(View):
             except (ValueError, TypeError):
                 return not_found(request_id)
 
+        # --- Reserve daily quota slot (atomic, idempotent) ---
+        try:
+            daily_remaining = DailyQuota.reserve(
+                user_id=user_id,
+                request_id=request_id,
+            )
+        except QuotaExceededError as exc:
+            return quota_exceeded(request_id, daily_remaining=exc.daily_remaining)
+
         # --- Run pipeline ---
         pipeline = TutoringPipeline(config=config)
         try:
@@ -106,6 +117,7 @@ class AskView(View):
                 conversation_id=conversation_id,
                 idempotency_key=idempotency_key,
                 request_id=uuid.UUID(request_id),
+                daily_remaining=daily_remaining,
             )
         except IdempotencyConflict:
             return idempotency_conflict(request_id)
