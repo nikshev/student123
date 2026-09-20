@@ -208,7 +208,7 @@ def env(monkeypatch):
     fake = FakeClient()
     monkeypatch.setattr(
         "ai_tutor_xblock.ai_tutor_xblock.block.TutorServiceClient",
-        lambda: fake,
+        lambda *args, **kwargs: fake,
     )
     return fake
 
@@ -433,6 +433,27 @@ class TestAskServiceErrorMapping:
         assert envelope["error_code"] == "service_unavailable"
         assert envelope["config_version"] == "unknown"
 
+    def test_ask_config_fetched_once_per_block(self, env):
+        """Cached projection: two asks -> one config() call (§6)."""
+        env.ask_result = shown_result()
+        block = make_block()
+        call_ask(block, ask_body())
+        call_ask(block, ask_body())
+        assert len(env.config_calls) == 1
+        assert len(env.ask_calls) == 2
+
+    def test_ask_success_uses_service_result_config_version(self, env):
+        """Success config_version comes from the service result, not config()."""
+        env.config_result = ConfigResult(
+            config_version="9.9.9", daily_limit=10,
+            request_timeout_seconds=30, http_connect_timeout_seconds=2,
+            question_max_chars=2000,
+        )
+        env.ask_result = shown_result()
+        block = make_block()
+        result = call_ask(block, ask_body())
+        assert result["config_version"] == CONFIG_VERSION
+
 
 class TestAskGuard:
     @pytest.mark.parametrize("runtime_cls", [StudioRuntime, WorkbenchRuntime])
@@ -525,6 +546,19 @@ class TestHistory:
         envelope = error_envelope(exc_info.value)
         assert envelope["error_code"] == "conversation_not_found"
         assert conversation_id not in json.dumps(envelope, ensure_ascii=False)
+
+    def test_history_owner_forbidden_404_no_id_leak(self, env):
+        """Service 403 (owner mismatch) -> local 404, indistinguishable from not-found (§3)."""
+        conversation_id = str(uuid.uuid4())
+        env.history_error = ForbiddenError()
+        block = make_block()
+        with pytest.raises(JsonHandlerError) as exc_info:
+            call_history(block, json.dumps({"conversation_id": conversation_id}))
+        assert exc_info.value.status_code == 404
+        envelope = error_envelope(exc_info.value)
+        assert envelope["error_code"] == "conversation_not_found"
+        assert conversation_id not in json.dumps(envelope, ensure_ascii=False)
+        assert len(env.history_calls) == 1
 
     def test_history_service_unavailable_503(self, env):
         env.history_error = ServiceUnavailableError()

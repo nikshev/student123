@@ -13,6 +13,7 @@ successful projection for that request and cannot be stale/cached here.
 import json
 import uuid
 
+from django.conf import settings
 from xblock.core import XBlock
 from xblock.exceptions import JsonHandlerError
 from xblock.fields import Scope, String
@@ -86,6 +87,22 @@ _GENERIC_SERVICE_MESSAGE = "Репетитор тимчасово недосту
 ASK_EXACT_KEYS = {"question", "conversation_id", "request_id"}
 HISTORY_EXACT_KEYS = {"conversation_id"}
 
+# history-specific mapping (xblock-interface.md §3): service 403 (owner
+# mismatch) is returned as generic 404 so that the existence of a foreign
+# conversation never leaks.
+_HISTORY_ERROR_MAP = {
+    **_ERROR_MAP,
+    ForbiddenError: (404, "conversation_not_found", "Діалог не знайдено", False),
+}
+
+
+def _make_client() -> TutorServiceClient:
+    """Build the service client from Django settings (deployment seams)."""
+    return TutorServiceClient(
+        base_url=getattr(settings, "AI_TUTOR_SERVICE_URL", ""),
+        shared_secret=getattr(settings, "AI_TUTOR_SHARED_SECRET", ""),
+    )
+
 
 def _is_valid_uuid(value) -> bool:
     try:
@@ -130,9 +147,10 @@ def _validation_error_envelope(body, config_version: str) -> dict:
     }
 
 
-def _service_error_map(exc) -> tuple:
+def _service_error_map(exc, history: bool = False) -> tuple:
     """Return (http_status, error_code, message, can_retry) for a service error."""
-    return _ERROR_MAP.get(
+    error_map = _HISTORY_ERROR_MAP if history else _ERROR_MAP
+    return error_map.get(
         type(exc),
         (
             503,
@@ -143,8 +161,8 @@ def _service_error_map(exc) -> tuple:
     )
 
 
-def _service_error_envelope(exc, body, config_version: str) -> dict:
-    http_status, error_code, message, can_retry = _service_error_map(exc)
+def _service_error_envelope(exc, body, config_version: str, history: bool = False) -> dict:
+    http_status, error_code, message, can_retry = _service_error_map(exc, history)
     return {
         "status": "error",
         "error_code": error_code,
@@ -215,6 +233,10 @@ class AiTutorXBlock(XBlock):
         help="This name appears in the horizontal navigation at the top of the page."
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._config_cache = None
+
     def _check_enrollment(self) -> GuardResult:
         """
         Helper that checks enrollment using EnrollmentGuard as the student gate.
@@ -228,6 +250,26 @@ class AiTutorXBlock(XBlock):
         """
         guard = EnrollmentGuard(self.runtime)
         return guard.check()
+
+    def _get_config(self, client, body):
+        """Cached public config projection (tutor-service-api.md §6)."""
+        if self._config_cache is not None:
+            return self._config_cache
+        try:
+            config = client.config()
+        except Exception as exc:
+            status_code, error_code, message, can_retry = _service_error_map(exc)
+            envelope = {
+                "status": "error",
+                "error_code": error_code,
+                "message": message,
+                "can_retry": can_retry,
+                "request_id": _resolve_request_id(body),
+                "config_version": "unknown",
+            }
+            raise JsonHandlerError(status_code, json.dumps(envelope))
+        self._config_cache = config
+        return config
 
     def ask(self, request, suffix=""):
         """
@@ -245,20 +287,12 @@ class AiTutorXBlock(XBlock):
         if not guard.allow:
             raise JsonHandlerError(403, json.dumps(_access_denied_envelope(body)))
 
-        client = TutorServiceClient()
+        client = _make_client()
         data, _config_version = _parse_ask_body(body)
 
-        # config must be fetched before question limit validation; it also
-        # provides config_version for this request's error envelope.
-        try:
-            config = client.config()
-        except Exception as exc:
-            raise JsonHandlerError(
-                503,
-                json.dumps(
-                    _service_error_envelope(exc, body, "unknown")
-                ),
-            )
+        # config must be fetched before question limit validation; the block
+        # caches the last valid projection per instance (§6).
+        config = self._get_config(client, body)
 
         question = data["question"]
         if not isinstance(question, str):
@@ -308,7 +342,7 @@ class AiTutorXBlock(XBlock):
             "daily_remaining": result.daily_remaining,
             "latency_ms": result.latency_ms,
             "route": result.route,
-            "config_version": config.config_version,
+            "config_version": result.config_version,
             "can_retry": False,
         }
 
@@ -328,7 +362,7 @@ class AiTutorXBlock(XBlock):
         if not guard.allow:
             raise JsonHandlerError(403, json.dumps(_access_denied_envelope(body)))
 
-        client = TutorServiceClient()
+        client = _make_client()
 
         try:
             data = json.loads(body)
@@ -390,8 +424,8 @@ class AiTutorXBlock(XBlock):
                 unit_usage_key=unit_usage_key,
             )
         except Exception as exc:
-            envelope = _service_error_envelope(exc, body, "unknown")
-            status_code, _, _, _ = _service_error_map(exc)
+            envelope = _service_error_envelope(exc, body, "unknown", history=True)
+            status_code, _, _, _ = _service_error_map(exc, history=True)
             raise JsonHandlerError(status_code, json.dumps(envelope))
 
         return {
