@@ -58,29 +58,35 @@ reviewer запускай після завершення implementer.
 | Коли | Агент | Модель |
 |---|---|---|
 | план, data-model, contracts, декомпозиція на задачі | `architect` | openrouter/openai/gpt-5.6-sol |
-| рутинна задача `T-xxx`: boilerplate, тести, дрібні правки | `implementer` | openrouter/nvidia/nemotron-3.5-lightning:free |
-| складні фічі, багатофайлові зміни, рефакторинги; задача з міткою `critical:` або після ескалації | `implementer-senior` | openrouter/nvidia/nemotron-3-ultra-550b-a55b:free |
+| рутинна задача `T-xxx`: boilerplate, тести, дрібні правки | `implementer` | openrouter/free |
+| складні фічі, багатофайлові зміни, рефакторинги; задача з міткою `critical:` або після ескалації | `implementer-senior` | openrouter/free |
 | ревʼю після кожної задачі і перед мержем фічі | `reviewer` | deepseek/deepseek-v4-pro, read-only |
 
 ### Fallback-ланцюги opencode
 
-Якщо модель не відповіла або повернула порожню відповідь, бери наступну в
-ланцюгу. Файли агентів носять тільки основну модель; ланцюг тримається тут.
+`implementer` і `implementer-senior` працюють на `openrouter/free` — Free
+Models Router OpenRouter: запит автоматично йде на будь-яку доступну вільну
+модель (фільтрується за потрібними можливостями). Конкретні моделі внизу —
+ручний fallback, коли free-роутер недоступний. Файли агентів носять тільки
+основну модель; ланцюг тримається тут.
 
-`implementer-senior`:
+`implementer-senior` (ручний fallback після `openrouter/free`):
 
 1. `openrouter/nvidia/nemotron-3-ultra-550b-a55b:free` — 1M контекст, multi-step reasoning, оркестрація;
 2. `openrouter/thinkingmachines/inkling:free` — 1M контекст, reasoning + мультимодальність;
 3. `openrouter/poolside/laguna-s-2.1:free` — найсильніший чисто кодовий агент free-тіру;
 4. `openrouter/deepseek/deepseek-v4-flash-0731:free` — кодинг/агенти, 1M контекст, Rust;
-5. крайній fallback — `openrouter/moonshotai/kimi-k2.7-code`.
+5. далі — зупинка розробки (на платні моделі не переходимо без явного дозволу).
 
-`implementer`:
+`implementer` (ручний fallback після `openrouter/free`):
 
 1. `openrouter/nvidia/nemotron-3.5-lightning:free` — 3B active, high-throughput;
 2. альтернативи: `openrouter/cohere/north-mini-code:free` (64K output) або
    `openrouter/poolside/laguna-xs-2.1:free`;
-3. крайній fallback — `openrouter/openai/gpt-oss-120b`.
+3. далі — зупинка розробки (на платні моделі не переходимо без явного дозволу).
+
+Перемикання моделей — тільки в межах однієї задачі: після завершення задачі
+файл агента повертається на `openrouter/free`.
 
 ### Ескалація — автоматична
 
