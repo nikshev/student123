@@ -123,7 +123,7 @@ class TutoringPipeline:
             has_ready_materials = repo.get_latest_ready_material(course_id, unit_usage_key) is not None
 
             # --- relevance policy (replaces inline T-020 logic) ---
-            policy = RelevancePolicy(self.config)
+            policy = RelevancePolicy(self.config, client=self.client)
             decision = policy.decide(
                 question=question,
                 has_ready_materials=has_ready_materials,

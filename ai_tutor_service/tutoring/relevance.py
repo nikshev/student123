@@ -23,6 +23,8 @@ If retrieved_segments is non-empty (≥ min_rank_score) → returns None to sign
 from dataclasses import dataclass
 from typing import Any, Optional
 
+from django.conf import settings
+
 from ai_tutor_service.providers.client import LLMClient, LLMError
 
 
@@ -58,14 +60,20 @@ class RelevancePolicy:
     model IDs, and timeouts come from config.
     """
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, config: dict[str, Any], client=None):
         """
         Initialize policy with validated config.
 
         Args:
             config: Full tutor config dict from load_tutor_config().
+            client: Optional LLMClient instance; if omitted, one is created
+                    with the API key from Django settings (AI_TUTOR_LLM_API_KEY).
         """
         self.config = config
+        self._client = client or LLMClient(
+            config=config,
+            api_key=getattr(settings, "AI_TUTOR_LLM_API_KEY", ""),
+        )
 
     def decide(
         self,
@@ -113,8 +121,7 @@ class RelevancePolicy:
             model_id = self.config["model_id"]
             timeout = self.config["generation_timeout_seconds"]
 
-            client = LLMClient(config=self.config)
-            off_topic_result = client.off_topic(prompt, model_id, timeout)
+            off_topic_result = self._client.off_topic(prompt, model_id, timeout)
 
             classification = off_topic_result["classification"]
             confidence = off_topic_result["confidence"]
