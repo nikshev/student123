@@ -1,5 +1,6 @@
 # impl: FR-002-01
 # impl: FR-002-02
+# impl: FR-002-03
 # impl: FR-002-10
 """
 AI Tutor XBlock - student gate, ask/history JSON handlers, local error mapping.
@@ -480,10 +481,30 @@ class AiTutorXBlock(XBlock):
         return fragment
 
     def studio_view(self, context=None):
-        """Studio view - to be implemented in T-030."""
-        # TODO: Implement proper studio view (author-only)
-        # The EnrollmentGuard will deny Studio runtime with "lms_only" before
-        # reaching any student path, but Studio view itself needs author check
-        frag = Fragment()
-        frag.add_content("<p>AI Tutor XBlock - Studio View (skeleton)</p>")
-        return frag
+        """Studio view (FR-002-03): author-only materials status display."""
+        if not getattr(self.runtime, "is_author_mode", False):
+            return Fragment()
+
+        client = _make_client()
+        config = client.config()
+        course_id = self.runtime.course_id
+        unit_usage_key = str(self.scope_ids.usage_id)
+        materials = client.materials_status(course_id, unit_usage_key)
+
+        try:
+            display_name = self.display_name
+        except Exception:
+            display_name = type(self).display_name.default
+
+        template_text = (
+            Path(__file__).resolve().parent / "templates" / "studio.html"
+        ).read_text(encoding="utf-8")
+        template = Template(template_text)
+        html = template.render(Context({
+            "display_name": display_name,
+            "config_version": config.config_version,
+            "materials_status": materials.status,
+        }))
+        fragment = Fragment()
+        fragment.add_content(html)
+        return fragment
