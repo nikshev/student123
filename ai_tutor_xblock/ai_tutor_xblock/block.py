@@ -12,8 +12,10 @@ successful projection for that request and cannot be stale/cached here.
 
 import json
 import uuid
+from pathlib import Path
 
 from django.conf import settings
+from django.template import Context, Template
 from xblock.core import XBlock
 from xblock.exceptions import JsonHandlerError
 from xblock.fields import Scope, String
@@ -445,12 +447,36 @@ class AiTutorXBlock(XBlock):
 
     # Placeholder methods to satisfy XBlock interface (will be implemented later)
     def student_view(self, context=None):
-        """Student view - to be implemented in T-028."""
-        # TODO: Implement proper student view that calls _check_enrollment() first
-        # For now return a fragment indicating this is a skeleton
-        frag = Fragment()
-        frag.add_content("<p>AI Tutor XBlock - Student View (skeleton)</p>")
-        return frag
+        """
+        Student chat view (FR-002-01, xblock-interface.md §4).
+
+        EnrollmentGuard runs first: denied runtimes get an empty fragment with
+        no chat markup, handler URLs or service data, and the client is never
+        instantiated. Enrolled LMS renders templates/student.html with only
+        the allowed projection: initial LOADING state, config_version,
+        materials_status and handler URLs.
+        """
+        guard = self._check_enrollment()
+        if not guard.allow:
+            return Fragment()
+
+        client = _make_client()
+        config = self._get_config(client, "")
+        course_id = self.runtime.course_id
+        unit_usage_key = str(self.scope_ids.usage_id)
+        materials = client.materials_status(course_id, unit_usage_key)
+
+        template_text = (Path(__file__).resolve().parent / "templates" / "student.html").read_text(encoding="utf-8")
+        template = Template(template_text)
+        html = template.render(Context({
+            "config_version": config.config_version,
+            "materials_status": materials.status,
+            "ask_url": self.runtime.handler_url(self, "ask"),
+            "history_url": self.runtime.handler_url(self, "history"),
+        }))
+        fragment = Fragment()
+        fragment.add_content(html)
+        return fragment
 
     def studio_view(self, context=None):
         """Studio view - to be implemented in T-030."""

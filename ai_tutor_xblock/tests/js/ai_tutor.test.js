@@ -8,10 +8,11 @@
  * synchronous UI (no navigation/streaming), accessible announcements,
  * safe source rendering.
  *
- * EXPECTED RED REASON (before T-028): module '../../static/js/ai_tutor.js'
- * does not exist yet — jest fails with "Cannot find module" and every test
- * in this suite errors. T-028 creates the module exporting
- * ChatStateReducer with createInitialState() and reduce(state, event).
+ * EXPECTED RED REASON (before T-028): module
+ * '../../ai_tutor_xblock/static/js/ai_tutor.js' does not exist yet — jest
+ * fails with "Cannot find module" and every test in this suite errors.
+ * T-028 creates the module exporting ChatStateReducer with
+ * createInitialState() and reduce(state, event).
  *
  * === ChatStateReducer CONTRACT (for T-028) ===
  *
@@ -57,7 +58,7 @@
  *   - sources stored verbatim as safe objects (rendered as text only)
  */
 
-const { ChatStateReducer } = require('../../static/js/ai_tutor.js');
+const { ChatStateReducer } = require('../../ai_tutor_xblock/static/js/ai_tutor.js');
 
 const SAMPLE_REQUEST_ID = '550e8400-e29b-41d4-a716-446655440000';
 const SAMPLE_INPUT = "Чому при множенні двох від'ємних чисел виходить додатне число?";
