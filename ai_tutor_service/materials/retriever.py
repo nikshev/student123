@@ -50,11 +50,10 @@ class MaterialRetriever:
         if not query or not query.strip():
             return ""
 
-        # Escape FTS5 special characters: " * - + ( ) { } ^ @
-        # We'll use simple term matching without operators
-        escaped = re.sub(r'["*\-+(){}@^]', ' ', query)
-        # Split into terms, filter empty
-        terms = [t for t in escaped.split() if t]
+        # Whitelist approach: keep only letter/digit runs as terms. Every other
+        # character (FTS5 operators, punctuation, quotes, diacritic separators)
+        # is dropped, so the MATCH expression can never hit FTS5 query syntax.
+        terms = re.findall(r"[A-Za-zА-Яа-яЁёЇїІіЄєҐґ0-9]+", query)
         if not terms:
             return ""
         # Join with OR for broad matching

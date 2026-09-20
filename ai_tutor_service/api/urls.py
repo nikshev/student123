@@ -7,8 +7,8 @@ Routes for all /api/v1/* endpoints per contract.
 
 from django.urls import path
 
+from ai_tutor_service.api.ask import ask_view
 from ai_tutor_service.api.views import (
-    ask_view,
     config_view,
     conversation_view,
     gate_run_view,

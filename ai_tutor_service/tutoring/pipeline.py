@@ -1,0 +1,269 @@
+# impl: FR-002-01
+"""
+TutoringPipeline — the core AI tutor pipeline.
+
+Executes the seam: student Message → retrieval → [generation → guard] → tutor Message
+within a single atomic transaction. All prompts/replies/timeouts/models come from
+tutor_config.yaml; nothing is hard-coded.
+"""
+
+import hashlib
+import json
+import time
+import uuid
+from datetime import timedelta
+from pathlib import Path
+from typing import Any
+
+from django.conf import settings
+from django.db import transaction
+from django.utils import timezone
+
+from ai_tutor_service.config import load_tutor_config
+from ai_tutor_service.conversations.models import Conversation, Message
+from ai_tutor_service.limits.models import IdempotencyRecord
+from ai_tutor_service.materials.retriever import MaterialRetriever
+from ai_tutor_service.providers.client import LLMClient
+from ai_tutor_service.tutoring.prompting import (
+    build_guard_prompt,
+    build_off_topic_prompt,
+    build_tutor_prompt,
+)
+
+CONFIG_PATH = Path(__file__).resolve().parents[1] / "tutor_config.yaml"
+
+
+def _hash_payload(payload: dict[str, Any]) -> str:
+    """SHA-256 hex digest of a normalized JSON payload."""
+    normalized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+class TutoringPipeline:
+    """Runs the tutoring pipeline for a single /ask request."""
+
+    def __init__(self, config: dict[str, Any] | None = None):
+        self.config = config or load_tutor_config(str(CONFIG_PATH))
+        self._client: LLMClient | None = None
+
+    @property
+    def client(self) -> LLMClient:
+        if self._client is None:
+            self._client = LLMClient(
+                config=self.config,
+                api_key=getattr(settings, "AI_TUTOR_LLM_API_KEY", ""),
+            )
+        return self._client
+
+    def run(
+        self,
+        *,
+        question: str,
+        user_id: str,
+        course_id: str,
+        unit_usage_key: str,
+        conversation_id: uuid.UUID | None,
+        idempotency_key: uuid.UUID,
+        request_id: uuid.UUID,
+    ) -> dict[str, Any]:
+        """Execute the full tutoring pipeline and return the terminal response."""
+        payload = {
+            "question": question,
+            "user_id": user_id,
+            "course_id": course_id,
+            "unit_usage_key": unit_usage_key,
+            "conversation_id": str(conversation_id) if conversation_id else None,
+        }
+        payload_hash = _hash_payload(payload)
+
+        # --- idempotency check (before mutation) ---
+        try:
+            existing = IdempotencyRecord.objects.get(request_id=idempotency_key)
+        except IdempotencyRecord.DoesNotExist:
+            pass
+        else:
+            if existing.payload_hash != payload_hash:
+                raise IdempotencyConflict()
+            return existing.response
+
+        # --- conversation resolution ---
+        if conversation_id is None:
+            conversation = self._create_conversation(user_id, course_id, unit_usage_key)
+        else:
+            conversation = self._resolve_conversation(conversation_id, user_id, course_id, unit_usage_key)
+
+        start_ms = time.monotonic()
+        status = "error"
+        answer = ""
+        topic = "other"
+        sources: list[dict[str, Any]] = []
+        blocked_reason: str | None = None
+
+        with transaction.atomic():
+            # student message
+            Message.objects.create(
+                conversation_id=conversation,
+                role=Message.Role.STUDENT,
+                text=question,
+                status=Message.Status.ASKED,
+                config_version=self.config["version"],
+            )
+
+            # --- retrieval ---
+            retriever = MaterialRetriever(self.config)
+            segments = retriever.search(question, course_id, unit_usage_key)
+
+            # Check if unit has any READY materials at all
+            from ai_tutor_service.materials.repository import MaterialRepository
+            repo = MaterialRepository()
+            has_ready_materials = repo.get_latest_ready_material(course_id, unit_usage_key) is not None
+
+            if not segments:
+                if not has_ready_materials:
+                    # no materials in unit → no_materials, no LLM calls
+                    status = "no_materials"
+                    answer = self.config["replies"]["no_materials"]
+                else:
+                    # materials exist but retrieval empty → off_topic classifier
+                    off_topic_prompt = build_off_topic_prompt(question, segments, self.config)
+                    model_id = self.config["model_id"]
+                    timeout = self.config["generation_timeout_seconds"]
+                    off_topic_result = self.client.off_topic(off_topic_prompt, model_id, timeout)
+                    classification = off_topic_result["classification"]
+                    topic = off_topic_result.get("top_source_label", "other") or "other"
+                    if classification == "off_topic":
+                        status = "off_topic"
+                        answer = self.config["replies"]["off_topic"]
+                    else:
+                        status = "no_materials"
+                        answer = self.config["replies"]["no_materials"]
+            else:
+                # --- generation ---
+                tutor_prompt = build_tutor_prompt(question, segments, self.config)
+                gen_timeout = self.config["generation_timeout_seconds"]
+                model_id = self.config["model_id"]
+                gen_result = self.client.generate(tutor_prompt, model_id, gen_timeout)
+                candidate_text = gen_result["text"]
+
+                # --- guard ---
+                guard_prompt = build_guard_prompt(candidate_text, self.config)
+                guard_timeout = self.config["guard_timeout_seconds"]
+                guard_model_id = self.config["guard_model_id"]
+                guard_result = self.client.guard(guard_prompt, guard_model_id, guard_timeout)
+
+                if guard_result["contains_solution"]:
+                    status = "blocked"
+                    answer = self.config["replies"]["blocked"]
+                    blocked_reason = guard_result["reason"]
+                    sources = []
+                    topic = "other"
+                else:
+                    status = "shown"
+                    answer = candidate_text
+                    topic = self._pick_topic(segments)
+                    sources = self._build_sources(segments)
+
+            # --- tutor message ---
+            tutor_message = Message.objects.create(
+                conversation_id=conversation,
+                role=Message.Role.TUTOR,
+                text=answer,
+                status=status,
+                topic=topic,
+                sources=sources,
+                blocked_reason=blocked_reason,
+                latency_ms=int((time.monotonic() - start_ms) * 1000),
+                route="default",
+                config_version=self.config["version"],
+            )
+
+            elapsed_ms = int((time.monotonic() - start_ms) * 1000)
+            daily_remaining = self.config["daily_limit"]
+
+            response = {
+                "request_id": str(request_id),
+                "conversation_id": str(conversation.id),
+                "status": status,
+                "answer": answer,
+                "topic": topic,
+                "sources": sources,
+                "blocked_reason": blocked_reason,
+                "daily_remaining": daily_remaining,
+                "latency_ms": elapsed_ms,
+                "route": "default",
+                "config_version": self.config["version"],
+            }
+
+            # Store idempotency record AFTER success (not before)
+            IdempotencyRecord.objects.create(
+                request_id=idempotency_key,
+                user_id=user_id,
+                payload_hash=payload_hash,
+                response=response,
+            )
+
+        return response
+
+    def _create_conversation(
+        self, user_id: str, course_id: str, unit_usage_key: str
+    ) -> Conversation:
+        expires_at = timezone.now() + timedelta(days=self.config["conversation_ttl_days"])
+        return Conversation.objects.create(
+            user_id=user_id,
+            course_id=course_id,
+            unit_usage_key=unit_usage_key,
+            expires_at=expires_at,
+        )
+
+    def _resolve_conversation(
+        self,
+        conversation_id: uuid.UUID,
+        user_id: str,
+        course_id: str,
+        unit_usage_key: str,
+    ) -> Conversation:
+        try:
+            conversation = Conversation.objects.get(pk=conversation_id)
+        except Conversation.DoesNotExist:
+            raise ConversationNotFoundError()
+        if (
+            conversation.user_id != user_id
+            or conversation.course_id != course_id
+            or conversation.unit_usage_key != unit_usage_key
+        ):
+            raise ActorMismatchError()
+        return conversation
+
+    @staticmethod
+    def _pick_topic(segments: list[dict[str, Any]]) -> str:
+        """Pick topic from the top source_ref or 'other'."""
+        if segments:
+            source_ref = segments[0].get("source_ref", "")
+            if source_ref:
+                return source_ref
+        return "other"
+
+    @staticmethod
+    def _build_sources(segments: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Build source list with exactly segment_id/kind/source_ref/excerpt (no rank_score)."""
+        sources = []
+        for seg in segments:
+            sources.append({
+                "segment_id": seg["segment_id"],
+                "kind": seg["kind"],
+                "source_ref": seg["source_ref"],
+                "excerpt": seg["excerpt"],
+            })
+        return sources
+
+
+class IdempotencyConflict(Exception):
+    """Same idempotency key with different payload."""
+
+
+class ConversationNotFoundError(Exception):
+    """Conversation ID not found."""
+
+
+class ActorMismatchError(Exception):
+    """Conversation belongs to a different actor."""
