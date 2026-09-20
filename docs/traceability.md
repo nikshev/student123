@@ -2,7 +2,7 @@
 
 <!-- ГЕНЕРУЄТЬСЯ scripts/trace.py — не редагувати вручну -->
 
-Вимог: **30** · задач: **93** (виконано 72) · вимог у роботі: **10** · порушень: **0**
+Вимог: **30** · задач: **93** (виконано 73) · вимог у роботі: **9** · порушень: **0**
 
 ## 001-bunny-video
 
@@ -33,7 +33,7 @@
 | `FR-002-02` | Учень, не зарахований на курс, MUST NOT мати доступу до репетитора. | `T-015`, `T-016`, `T-023`, `T-024` | `ai_tutor_xblock/ai_tutor_xblock/block.py`, `ai_tutor_xblock/ai_tutor_xblock/guards.py`, `ai_tutor_service/api/apps.py`, `ai_tutor_service/api/urls.py`, `ai_tutor_service/api/errors.py`, `ai_tutor_service/api/auth.py`, `ai_tutor_service/api/__init__.py` | `ai_tutor_xblock/tests/unit/test_access_guards.py`, `ai_tutor_service/tests/contract/test_api_auth.py` |
 | `FR-002-03` | Відповідь репетитора MUST спиратися на матеріали поточного юніту (транскрипт лекції, конспект); де можливо, ві | `T-017`, `T-018`, `T-029`, `T-030`, `T-031`, `T-032` | `ai_tutor_xblock/ai_tutor_xblock/block.py`, `ai_tutor_service/tutoring/grounding.py`, `ai_tutor_service/tutoring/pipeline.py`, `ai_tutor_service/api/views.py`, `ai_tutor_service/materials/retriever.py`, `ai_tutor_service/materials/repository.py` | `ai_tutor_xblock/tests/unit/test_studio_view.py`, `ai_tutor_service/tests/integration/test_materials_api.py`, `ai_tutor_service/tests/integration/test_grounded_sources.py`, `ai_tutor_service/tests/unit/test_fts_retriever.py` |
 | `FR-002-04` | Якщо в матеріалах юніту немає відповіді, репетитор MUST чесно повідомити про це, а не вигадувати відповідь. | `T-033`, `T-034` | `ai_tutor_service/tutoring/relevance.py`, `ai_tutor_service/tutoring/pipeline.py` | `ai_tutor_service/tests/unit/test_relevance_policy.py` |
-| `FR-002-05` | Репетитор MUST NOT давати готових розв'язань навчальних завдань; він MUST пояснювати підхід до розв'язання. | `T-035`, `T-036` | — | `ai_tutor_service/tests/unit/test_tutoring_policy.py` |
+| `FR-002-05` | Репетитор MUST NOT давати готових розв'язань навчальних завдань; він MUST пояснювати підхід до розв'язання. | `T-035`, `T-036` | `ai_tutor_service/tutoring/policy.py`, `ai_tutor_service/tutoring/pipeline.py` | `ai_tutor_service/tests/unit/test_tutoring_policy.py` |
 | `FR-002-06` | Відповідь із готовим розв'язанням навчального завдання MUST блокуватися автоматично до показу учневі. | `T-037`, `T-038` | — | — |
 | `FR-002-07` | Кожен факт блокування MUST бути записаний у лог: учень, курс, юніт, питання, час. | `T-039`, `T-040` | — | — |
 | `FR-002-08` | Після блокування учень MUST бачити зрозуміле пояснення правила («допомагаю розібратися, а не розв'язую за тебе | `T-041`, `T-042` | — | — |

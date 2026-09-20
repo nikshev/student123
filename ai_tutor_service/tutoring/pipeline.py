@@ -1,6 +1,7 @@
 # impl: FR-002-01
 # impl: FR-002-03
 # impl: FR-002-04
+# impl: FR-002-05
 """
 TutoringPipeline — the core AI tutor pipeline.
 
@@ -27,10 +28,8 @@ from ai_tutor_service.limits.models import IdempotencyRecord
 from ai_tutor_service.materials.retriever import MaterialRetriever
 from ai_tutor_service.providers.client import LLMClient
 from ai_tutor_service.tutoring.grounding import build_sources
-from ai_tutor_service.tutoring.prompting import (
-    build_guard_prompt,
-    build_tutor_prompt,
-)
+from ai_tutor_service.tutoring.policy import build_tutoring_policy
+from ai_tutor_service.tutoring.prompting import build_guard_prompt
 from ai_tutor_service.tutoring.relevance import RelevancePolicy
 
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "tutor_config.yaml"
@@ -138,9 +137,8 @@ class TutoringPipeline:
                 sources = decision.sources
             else:
                 # --- generation ---
-                tutor_prompt = build_tutor_prompt(question, segments, self.config)
+                tutor_prompt, model_id = build_tutoring_policy(question, segments, self.config)
                 gen_timeout = self.config["generation_timeout_seconds"]
-                model_id = self.config["model_id"]
                 gen_result = self.client.generate(tutor_prompt, model_id, gen_timeout)
                 candidate_text = gen_result["text"]
 
