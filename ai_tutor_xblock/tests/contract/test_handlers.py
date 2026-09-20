@@ -97,8 +97,8 @@ class StubUser:
 
 
 class LMSRuntime:
-    def __init__(self, user=None, course_id=COURSE_ID):
-        self.user = user if user is not None else StubUser()
+    def __init__(self, user=StubUser(), course_id=COURSE_ID):
+        self.user = user
         self.course_id = course_id
         self.is_author_mode = False
 
@@ -236,7 +236,7 @@ def error_envelope(exc):
     return json.loads(exc.message)
 
 
-def assert_error(block, body, status, error_code, env_fake):
+def assert_error(block, body, status, error_code, env_fake, expect_called=False):
     with pytest.raises(JsonHandlerError) as exc_info:
         call_ask(block, body)
     assert exc_info.value.status_code == status
@@ -248,7 +248,10 @@ def assert_error(block, body, status, error_code, env_fake):
     assert isinstance(envelope["can_retry"], bool)
     uuid.UUID(envelope["request_id"])
     assert isinstance(envelope["config_version"], str)
-    assert env_fake.ask_calls == [], "error-шлях не має викликати сервіс"
+    if expect_called:
+        assert len(env_fake.ask_calls) == 1, "клієнт мав бути викликаний рівно раз"
+    else:
+        assert env_fake.ask_calls == [], "error-шлях не має викликати сервіс"
     return envelope
 
 
@@ -399,12 +402,14 @@ class TestAskServiceErrorMapping:
         assert envelope["error_code"] == code
         assert envelope["can_retry"] is can_retry
         assert "answer" not in envelope, "error-відповідь не містить answer"
+        assert len(env.ask_calls) == 1, "клієнт мав бути викликаний рівно раз"
 
     def test_ask_unknown_status_never_shows_answer(self, env):
         env.ask_error = SchemaError("service returned status 'weird'")
         block = make_block()
         envelope = assert_error(block, ask_body(), 503,
-                                "invalid_service_response", env)
+                                "invalid_service_response", env,
+                                expect_called=True)
         assert "answer" not in envelope
 
     def test_ask_auth_errors_hide_details(self, env):
