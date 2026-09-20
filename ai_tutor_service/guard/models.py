@@ -66,8 +66,11 @@ class BlockRecord(models.Model):
             raise ValidationError({"config_version": "Config version is required."})
 
     def save(self, *args, **kwargs):
-        # Prevent updates to existing records (append-only)
-        if self.pk:
+        # Append-only: prevent updates to existing records.
+        # Use _state.adding (not self.pk) because UUIDField default
+        # generates a PK on __init__, so self.pk is always truthy for
+        # new instances — checking self.pk would block all creates.
+        if not self._state.adding:
             raise ValidationError("BlockRecord is append-only and cannot be updated.")
         super().save(*args, **kwargs)
 

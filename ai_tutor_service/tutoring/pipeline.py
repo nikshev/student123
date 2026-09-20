@@ -3,6 +3,7 @@
 # impl: FR-002-04
 # impl: FR-002-05
 # impl: FR-002-06
+# impl: FR-002-07
 """
 TutoringPipeline — the core AI tutor pipeline.
 
@@ -25,6 +26,7 @@ from django.utils import timezone
 
 from ai_tutor_service.config import load_tutor_config
 from ai_tutor_service.conversations.models import Conversation, Message
+from ai_tutor_service.guard.audit import record_block
 from ai_tutor_service.limits.models import IdempotencyRecord
 from ai_tutor_service.guard.solution_guard import SolutionGuard
 from ai_tutor_service.materials.retriever import MaterialRetriever
@@ -179,6 +181,25 @@ class TutoringPipeline:
                 route="default",
                 config_version=self.config["version"],
             )
+
+            # --- atomic block persistence (FR-002-07) ---
+            # Blocked response is only returned after durable ack:
+            # BlockRecord is created in the SAME transaction as the
+            # blocked Message. If BlockRecord.save fails (OperationalError),
+            # the entire transaction rolls back → no blocked response,
+            # no candidate persisted → /ask maps to 503.
+            if status == "blocked":
+                record_block(
+                    message=tutor_message,
+                    conversation=conversation,
+                    user_id=user_id,
+                    course_id=course_id,
+                    unit_usage_key=unit_usage_key,
+                    question=question,
+                    reason=blocked_reason,
+                    guard_model_id=self.config["guard_model_id"],
+                    config_version=self.config["version"],
+                )
 
             elapsed_ms = int((time.monotonic() - start_ms) * 1000)
 
