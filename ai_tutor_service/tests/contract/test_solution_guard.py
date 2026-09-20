@@ -36,7 +36,7 @@ from ai_tutor_service.providers.client import LLMClient, LLMError
 CONFIG_PATH = Path(__file__).resolve().parents[3] / "ai_tutor_service" / "tutor_config.yaml"
 CONFIG = load_tutor_config(CONFIG_PATH)
 
-FIXTURES_DIR = Path(__file__).resolve().parents[2] / "fixtures" / "llm" / "guard"
+FIXTURES_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "llm" / "guard"
 
 # Expected output shape per contract
 EXPECTED_OUTPUT_FIELDS = {"contains_solution", "reason"}

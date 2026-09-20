@@ -2,6 +2,7 @@
 # impl: FR-002-03
 # impl: FR-002-04
 # impl: FR-002-05
+# impl: FR-002-06
 """
 TutoringPipeline — the core AI tutor pipeline.
 
@@ -25,11 +26,11 @@ from django.utils import timezone
 from ai_tutor_service.config import load_tutor_config
 from ai_tutor_service.conversations.models import Conversation, Message
 from ai_tutor_service.limits.models import IdempotencyRecord
+from ai_tutor_service.guard.solution_guard import SolutionGuard
 from ai_tutor_service.materials.retriever import MaterialRetriever
 from ai_tutor_service.providers.client import LLMClient
 from ai_tutor_service.tutoring.grounding import build_sources
 from ai_tutor_service.tutoring.policy import build_tutoring_policy
-from ai_tutor_service.tutoring.prompting import build_guard_prompt
 from ai_tutor_service.tutoring.relevance import RelevancePolicy
 
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "tutor_config.yaml"
@@ -143,15 +144,13 @@ class TutoringPipeline:
                 candidate_text = gen_result["text"]
 
                 # --- guard ---
-                guard_prompt = build_guard_prompt(candidate_text, self.config)
-                guard_timeout = self.config["guard_timeout_seconds"]
-                guard_model_id = self.config["guard_model_id"]
-                guard_result = self.client.guard(guard_prompt, guard_model_id, guard_timeout)
+                guard = SolutionGuard(self.config, client=self.client)
+                verdict = guard.check(candidate_text)
 
-                if guard_result["contains_solution"]:
+                if verdict["contains_solution"]:
                     status = "blocked"
                     answer = self.config["replies"]["blocked"]
-                    blocked_reason = guard_result["reason"]
+                    blocked_reason = verdict["reason"]
                     sources = []
                     topic = "other"
                 else:
