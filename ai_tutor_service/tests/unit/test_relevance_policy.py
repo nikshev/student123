@@ -16,6 +16,7 @@ Test scenarios for two-step relevance policy (T-033):
 import json
 import uuid
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 from django.test import Client
@@ -197,7 +198,7 @@ class TestRelevancePolicy:
             "finish_reason": "stop"
         }
         
-        mock_off_topic = pytest.Mock(return_value=mock_off_topic_result)
+        mock_off_topic = Mock(return_value=mock_off_topic_result)
         monkeypatch.setattr(LLMClient, "off_topic", mock_off_topic)
         
         # Simulate has ready materials but low rank score (empty segments)
@@ -220,7 +221,7 @@ class TestRelevancePolicy:
 
     def test_off_topic_classification(self, monkeypatch):
         """
-        Scenario 3: classifier off_topic/unrelated → OFF_TOPIC.
+        Scenario 3: classifier off_topic/unrelated → OFF_TOPIC (класифікатор працює лише при порожньому retrieval).
         """
         policy = RelevancePolicy(CONFIG)
         
@@ -234,14 +235,12 @@ class TestRelevancePolicy:
             "finish_reason": "stop"
         }
         
-        mock_off_topic = pytest.Mock(return_value=mock_off_topic_result)
+        mock_off_topic = Mock(return_value=mock_off_topic_result)
         monkeypatch.setattr(LLMClient, "off_topic", mock_off_topic)
         
-        # Simulate has ready materials and some segments
+        # Simulate has ready materials and some segments (should be empty per contract)
         has_ready = True
-        retrieved_segments = [
-            {"segment_id": "seg1", "kind": "transcript", "source_ref": "video@00:00", "excerpt": "test"}
-        ]
+        retrieved_segments = []
         
         decision = policy.decide(
             question="Коли була Друга світова війна?",
@@ -271,7 +270,7 @@ class TestRelevancePolicy:
             "finish_reason": "stop"
         }
         
-        mock_off_topic = pytest.Mock(return_value=mock_off_topic_result)
+        mock_off_topic = Mock(return_value=mock_off_topic_result)
         monkeypatch.setattr(LLMClient, "off_topic", mock_off_topic)
         
         # Simulate has ready materials but no retrieved segments
@@ -298,7 +297,7 @@ class TestRelevancePolicy:
         # Mock LLMClient.off_topic to raise LLMError (malformed response)
         from ai_tutor_service.providers.client import LLMError
         
-        mock_off_topic = pytest.Mock(side_effect=LLMError(
+        mock_off_topic = Mock(side_effect=LLMError(
             "Provider returned malformed JSON", "malformed_response"
         ))
         monkeypatch.setattr(LLMClient, "off_topic", mock_off_topic)
@@ -323,7 +322,7 @@ class TestRelevancePolicy:
         """
         policy = RelevancePolicy(CONFIG)
 
-        mock_off_topic = pytest.Mock(side_effect=LLMError(
+        mock_off_topic = Mock(side_effect=LLMError(
             "Request timed out", "timeout"
         ))
         monkeypatch.setattr(LLMClient, "off_topic", mock_off_topic)
@@ -357,8 +356,8 @@ class TestRelevancePolicy:
             "finish_reason": "stop"
         }
         
-        mock_off_topic = pytest.Mock(return_value=mock_off_topic_result)
-        mock_generate = pytest.Mock()
+        mock_off_topic = Mock(return_value=mock_off_topic_result)
+        mock_generate = Mock()
         
         monkeypatch.setattr(LLMClient, "off_topic", mock_off_topic)
         monkeypatch.setattr(LLMClient, "generate", mock_generate)

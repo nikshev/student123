@@ -1,5 +1,6 @@
 # impl: FR-002-01
 # impl: FR-002-03
+# impl: FR-002-04
 """
 TutoringPipeline — the core AI tutor pipeline.
 
@@ -28,9 +29,9 @@ from ai_tutor_service.providers.client import LLMClient
 from ai_tutor_service.tutoring.grounding import build_sources
 from ai_tutor_service.tutoring.prompting import (
     build_guard_prompt,
-    build_off_topic_prompt,
     build_tutor_prompt,
 )
+from ai_tutor_service.tutoring.relevance import RelevancePolicy
 
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "tutor_config.yaml"
 
@@ -121,25 +122,20 @@ class TutoringPipeline:
             repo = MaterialRepository()
             has_ready_materials = repo.get_latest_ready_material(course_id, unit_usage_key) is not None
 
-            if not segments:
-                if not has_ready_materials:
-                    # no materials in unit → no_materials, no LLM calls
-                    status = "no_materials"
-                    answer = self.config["replies"]["no_materials"]
-                else:
-                    # materials exist but retrieval empty → off_topic classifier
-                    off_topic_prompt = build_off_topic_prompt(question, segments, self.config)
-                    model_id = self.config["model_id"]
-                    timeout = self.config["generation_timeout_seconds"]
-                    off_topic_result = self.client.off_topic(off_topic_prompt, model_id, timeout)
-                    classification = off_topic_result["classification"]
-                    topic = off_topic_result.get("top_source_label", "other") or "other"
-                    if classification == "off_topic":
-                        status = "off_topic"
-                        answer = self.config["replies"]["off_topic"]
-                    else:
-                        status = "no_materials"
-                        answer = self.config["replies"]["no_materials"]
+            # --- relevance policy (replaces inline T-020 logic) ---
+            policy = RelevancePolicy(self.config)
+            decision = policy.decide(
+                question=question,
+                has_ready_materials=has_ready_materials,
+                retrieved_segments=segments,
+            )
+
+            if decision is not None:
+                # no_materials or off_topic — decision already contains answer/topic
+                status = decision.status
+                answer = decision.answer
+                topic = decision.topic
+                sources = decision.sources
             else:
                 # --- generation ---
                 tutor_prompt = build_tutor_prompt(question, segments, self.config)
