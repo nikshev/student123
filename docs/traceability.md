@@ -2,7 +2,7 @@
 
 <!-- ГЕНЕРУЄТЬСЯ scripts/trace.py — не редагувати вручну -->
 
-Вимог: **30** · задач: **93** (виконано 59) · вимог у роботі: **15** · порушень: **0**
+Вимог: **30** · задач: **93** (виконано 60) · вимог у роботі: **15** · порушень: **0**
 
 ## 001-bunny-video
 
@@ -30,7 +30,7 @@
 | Вимога | Опис | Задачі | Імплементація | Тести |
 |---|---|---|---|---|
 | `FR-002-01` | Учень, зарахований на курс, MUST мати змогу поставити питання репетитору в інтерфейсі юніту і отримати відпові | `T-001`, `T-002`, `T-005`, `T-006`, `T-019`, `T-020`, `T-027`, `T-028` | `ai_tutor_test_settings.py`, `ai_tutor_xblock/__init__.py`, `ai_tutor_service/settings_test.py`, `ai_tutor_service/__init__.py`, `ai_tutor_xblock/tests/conftest.py`, `ai_tutor_service/tutoring/prompting.py`, `ai_tutor_service/tutoring/__init__.py`, `ai_tutor_service/tutoring/pipeline.py`, `ai_tutor_service/api/ask.py`, `ai_tutor_service/tests/conftest.py` | `ai_tutor_xblock/tests/test_xblock_harness.py`, `tests/architecture/test_ai_tutor_layout.py`, `ai_tutor_service/tests/test_service_harness.py`, `ai_tutor_service/tests/integration/test_ask_api.py` |
-| `FR-002-02` | Учень, не зарахований на курс, MUST NOT мати доступу до репетитора. | `T-015`, `T-016`, `T-023`, `T-024` | `ai_tutor_service/api/apps.py`, `ai_tutor_service/api/urls.py`, `ai_tutor_service/api/errors.py`, `ai_tutor_service/api/auth.py`, `ai_tutor_service/api/__init__.py` | `ai_tutor_service/tests/contract/test_api_auth.py` |
+| `FR-002-02` | Учень, не зарахований на курс, MUST NOT мати доступу до репетитора. | `T-015`, `T-016`, `T-023`, `T-024` | `ai_tutor_service/api/apps.py`, `ai_tutor_service/api/urls.py`, `ai_tutor_service/api/errors.py`, `ai_tutor_service/api/auth.py`, `ai_tutor_service/api/__init__.py` | `ai_tutor_xblock/tests/unit/test_access_guards.py`, `ai_tutor_service/tests/contract/test_api_auth.py` |
 | `FR-002-03` | Відповідь репетитора MUST спиратися на матеріали поточного юніту (транскрипт лекції, конспект); де можливо, ві | `T-017`, `T-018`, `T-029`, `T-030`, `T-031`, `T-032` | `ai_tutor_service/api/views.py`, `ai_tutor_service/materials/retriever.py`, `ai_tutor_service/materials/repository.py` | `ai_tutor_service/tests/integration/test_materials_api.py`, `ai_tutor_service/tests/unit/test_fts_retriever.py` |
 | `FR-002-04` | Якщо в матеріалах юніту немає відповіді, репетитор MUST чесно повідомити про це, а не вигадувати відповідь. | `T-033`, `T-034` | — | — |
 | `FR-002-05` | Репетитор MUST NOT давати готових розв'язань навчальних завдань; він MUST пояснювати підхід до розв'язання. | `T-035`, `T-036` | — | — |
