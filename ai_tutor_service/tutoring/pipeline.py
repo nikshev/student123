@@ -1,4 +1,5 @@
 # impl: FR-002-01
+# impl: FR-002-03
 """
 TutoringPipeline — the core AI tutor pipeline.
 
@@ -24,6 +25,7 @@ from ai_tutor_service.conversations.models import Conversation, Message
 from ai_tutor_service.limits.models import IdempotencyRecord
 from ai_tutor_service.materials.retriever import MaterialRetriever
 from ai_tutor_service.providers.client import LLMClient
+from ai_tutor_service.tutoring.grounding import build_sources
 from ai_tutor_service.tutoring.prompting import (
     build_guard_prompt,
     build_off_topic_prompt,
@@ -162,7 +164,14 @@ class TutoringPipeline:
                     status = "shown"
                     answer = candidate_text
                     topic = self._pick_topic(segments)
-                    sources = self._build_sources(segments)
+                    sources = build_sources(segments)
+                    # safety: ensure shown never has empty sources (Message.clean will raise)
+                    if not sources:
+                        # This should be impossible with valid segments from retriever,
+                        # but if it happens, fall back to no_materials behavior.
+                        status = "no_materials"
+                        answer = self.config["replies"]["no_materials"]
+                        sources = []
 
             # --- tutor message ---
             tutor_message = Message.objects.create(
@@ -242,19 +251,6 @@ class TutoringPipeline:
             if source_ref:
                 return source_ref
         return "other"
-
-    @staticmethod
-    def _build_sources(segments: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Build source list with exactly segment_id/kind/source_ref/excerpt (no rank_score)."""
-        sources = []
-        for seg in segments:
-            sources.append({
-                "segment_id": seg["segment_id"],
-                "kind": seg["kind"],
-                "source_ref": seg["source_ref"],
-                "excerpt": seg["excerpt"],
-            })
-        return sources
 
 
 class IdempotencyConflict(Exception):
