@@ -19,11 +19,13 @@ DailyQuota.reserve(user_id, request_id, now=None) -> int
 - accepted_count never decreases (DailyCounter constraint).
 - UTC rollover: the next UTC date starts a fresh counter (accepted_count == 0).
 
-Atomicity: transaction.atomic() + select_for_update() on the DailyCounter row
-ensures that two concurrent reservations for the same user on the same UTC date
-cannot both succeed beyond daily_limit. SQLite supports select_for_update() in
-transaction.atomic() (it becomes a no-op but the row is still locked via
-BEGIN IMMEDIATE).
+Atomicity: the increment is a single conditional UPDATE
+(accepted_count__lt=daily_limit) inside transaction.atomic() with
+select_for_update() on the DailyCounter row. On SQLite select_for_update is
+ignored, but UPDATE statements are serialized by the engine, so the
+read-modify-write race is closed at the statement level on every backend:
+two concurrent reservations for the same (user, date) can never both succeed
+beyond daily_limit.
 
 Durable idempotency: ReservationRecord(request_id UUID PK, user_id, date_utc,
 daily_remaining, created_at) stores the reservation outcome. A repeated
@@ -36,6 +38,7 @@ import uuid
 from datetime import datetime
 
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 
 from ai_tutor_service.config import load_tutor_config
@@ -111,8 +114,12 @@ class DailyQuota:
         else:
             return existing.daily_remaining
 
-        # Atomic reservation: lock the DailyCounter row for this user+date
-        # so concurrent reservations cannot exceed daily_limit.
+        # Atomic reservation. The increment is a single conditional UPDATE
+        # statement: on any backend the row is re-checked inside the statement,
+        # so two concurrent reservations for the same (user, date) can never
+        # push accepted_count above daily_limit. select_for_update additionally
+        # serializes the read-modify-write on backends that support it
+        # (SQLite executes UPDATE statements serialized anyway).
         with transaction.atomic():
             counter, created = DailyCounter.objects.select_for_update().get_or_create(
                 user_id=user_id,
@@ -120,25 +127,23 @@ class DailyQuota:
                 defaults={"accepted_count": 0},
             )
 
-            if counter.accepted_count < daily_limit:
-                # Increment under the row lock. F() expression avoids race
-                # conditions between read and write within the same transaction.
-                from django.db.models import F
-                DailyCounter.objects.filter(pk=counter.pk).update(
-                    accepted_count=F("accepted_count") + 1
-                )
-                # Refresh to get the new value
-                counter.refresh_from_db()
-                daily_remaining = daily_limit - counter.accepted_count
+            updated = DailyCounter.objects.filter(
+                pk=counter.pk,
+                accepted_count__lt=daily_limit,
+            ).update(accepted_count=F("accepted_count") + 1)
 
-                # Persist the reservation outcome for durable idempotency.
-                ReservationRecord.objects.create(
-                    request_id=request_uuid,
-                    user_id=user_id,
-                    date_utc=date_utc,
-                    daily_remaining=daily_remaining,
-                )
-                return daily_remaining
-            else:
-                # Quota exhausted: do NOT change accepted_count.
+            if not updated:
+                # Quota exhausted (or raced): do NOT change accepted_count.
                 raise QuotaExceededError(daily_remaining=0)
+
+            counter.refresh_from_db()
+            daily_remaining = daily_limit - counter.accepted_count
+
+            # Persist the reservation outcome for durable idempotency.
+            ReservationRecord.objects.create(
+                request_id=request_uuid,
+                user_id=user_id,
+                date_utc=date_utc,
+                daily_remaining=daily_remaining,
+            )
+            return daily_remaining

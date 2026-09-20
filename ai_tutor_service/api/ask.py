@@ -98,10 +98,12 @@ class AskView(View):
                 return not_found(request_id)
 
         # --- Reserve daily quota slot (atomic, idempotent) ---
+        # Keyed by the Idempotency-Key header so that a retry with the same
+        # key never charges the quota twice (contracts/tutor-service-api.md §8).
         try:
             daily_remaining = DailyQuota.reserve(
                 user_id=user_id,
-                request_id=request_id,
+                request_id=str(idempotency_key),
             )
         except QuotaExceededError as exc:
             return quota_exceeded(request_id, daily_remaining=exc.daily_remaining)

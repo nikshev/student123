@@ -45,6 +45,7 @@ from django.utils import timezone
 
 from ai_tutor_service.config import load_tutor_config
 from ai_tutor_service.conversations.models import Conversation, Message
+from ai_tutor_service.limits.models import DailyCounter
 from ai_tutor_service.providers.client import LLMClient, LLMError
 
 BEARER = "test-shared-secret-12345"
@@ -360,6 +361,28 @@ class TestAskShown:
             conversation_id__pk=uuid.UUID(d1["conversation_id"])
         )
         assert messages.count() == 2, "idempotent retry не має дублювати turn"
+
+    def test_idempotent_retry_does_not_double_charge_quota(self, fake_llm):
+        """Ретрай із тим самим Idempotency-Key не споживає квоту вдруге (T-022)."""
+        client = Client()
+        _seed_materials(client)
+        key = str(uuid.uuid4())
+        r1 = _ask(client, QUESTION, idempotency_key=key)
+        assert r1.status_code == 200, (
+            f"T-022 не реалізовано: очікувався 200, отримано {r1.status_code}"
+        )
+        r2 = _ask(client, QUESTION, idempotency_key=key)
+        assert r2.status_code == 200, (
+            f"повтор з тим самим Idempotency-Key мав дати 200, отримано {r2.status_code}"
+        )
+        d1, d2 = json.loads(r1.content), json.loads(r2.content)
+        assert d1["daily_remaining"] == d2["daily_remaining"]
+        counter = DailyCounter.objects.get(
+            user_id=USER_A, date_utc=timezone.now().date()
+        )
+        assert counter.accepted_count == 1, (
+            "idempotent retry не має інкрементувати daily quota"
+        )
 
 
 class TestAskNoMaterials:

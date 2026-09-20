@@ -151,3 +151,30 @@ def test_request_id_must_be_valid_uuid():
     """Non-UUID request_id is rejected (service-level guard)."""
     with pytest.raises(ValueError):
         DailyQuota.reserve(user_id="quota-user-bad", request_id="not-a-uuid", now=DAY_1)
+
+
+@pytest.mark.django_db
+def test_burst_of_attempts_never_exceeds_daily_limit():
+    """3x daily_limit attempts yield exactly daily_limit successes; counter capped.
+
+    Deterministic proxy for the concurrency guard: the conditional UPDATE
+    (accepted_count__lt=daily_limit) is what caps the counter. A true
+    multi-threaded race test is not viable on the shared-cache in-memory
+    SQLite test database (SQLITE_LOCKED on concurrent writers), so the
+    invariant is pinned by exhausting the quota 3x over.
+    """
+    daily_limit = _config()["daily_limit"]
+    user_id = "quota-user-burst"
+
+    successes = 0
+    exceeded = 0
+    for _ in range(daily_limit * 3):
+        try:
+            DailyQuota.reserve(user_id=user_id, request_id=str(uuid.uuid4()), now=DAY_1)
+            successes += 1
+        except QuotaExceededError:
+            exceeded += 1
+
+    assert successes == daily_limit
+    assert exceeded == daily_limit * 2
+    assert _counter(user_id, DAY_1).accepted_count == daily_limit

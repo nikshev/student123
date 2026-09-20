@@ -180,9 +180,20 @@ def conversation_not_found(request_id: str | None = None) -> JsonResponse:
 
 
 def quota_exceeded(request_id: str | None = None, daily_remaining: int = 0) -> JsonResponse:
-    """429 - Daily quota exceeded."""
-    return make_error_response_with_details(
-        "quota_exceeded", request_id, daily_remaining=daily_remaining
+    """429 - Daily quota exceeded; daily_remaining lives in error.details (§2)."""
+    if request_id is None:
+        request_id = str(uuid.uuid4())
+
+    return JsonResponse(
+        {
+            "error": {
+                "code": "quota_exceeded",
+                "message": ERROR_CODES["quota_exceeded"],
+                "details": {"daily_remaining": daily_remaining},
+            },
+            "request_id": request_id,
+        },
+        status=429,
     )
 
 
