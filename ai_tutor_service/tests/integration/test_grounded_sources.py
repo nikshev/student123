@@ -158,7 +158,7 @@ class FakeLLM:
         self.order = []
         # default valid responses
         self.generate_result = {"text": "Generated answer.", "rank_score": 0.5}
-        self.guard_result = {"contains_solution": False, "reason": ""}
+        self.guard_result = {"contains_solution": False, "reason": "Розв'язок не виявлено"}
         self.off_topic_result = {"classification": "in_scope", "top_source_label": "other"}
         self.generate_error = None
         self.guard_error = None

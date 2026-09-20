@@ -310,3 +310,41 @@ class TestSolutionGuardContract:
             assert candidate in prompt
             # Verify candidate is unchanged (we didn't modify it)
             assert candidate == "original candidate text"
+
+    def test_fail_closed_empty_reason(self):
+        """
+        Contract: empty reason is a malformed verdict → fail-closed
+        (candidate not shown, no fallback on False).
+        """
+        from ai_tutor_service.guard.solution_guard import SolutionGuard, GuardTechnicalError
+
+        guard = SolutionGuard(CONFIG)
+        
+        with patch.object(LLMClient, 'guard', return_value={
+            "contains_solution": False,
+            "reason": "",
+        }) as mock_guard:
+            with pytest.raises(GuardTechnicalError) as exc_info:
+                guard.check("any candidate")
+            assert exc_info.value.error_type == "malformed_response"
+            assert not hasattr(exc_info.value, 'contains_solution')
+            mock_guard.assert_called_once()
+
+    def test_fail_closed_whitespace_only_reason(self):
+        """
+        Contract: whitespace-only reason is a malformed verdict → fail-closed
+        (candidate not shown, no fallback on False).
+        """
+        from ai_tutor_service.guard.solution_guard import SolutionGuard, GuardTechnicalError
+
+        guard = SolutionGuard(CONFIG)
+        
+        with patch.object(LLMClient, 'guard', return_value={
+            "contains_solution": False,
+            "reason": "   ",
+        }) as mock_guard:
+            with pytest.raises(GuardTechnicalError) as exc_info:
+                guard.check("any candidate")
+            assert exc_info.value.error_type == "malformed_response"
+            assert not hasattr(exc_info.value, 'contains_solution')
+            mock_guard.assert_called_once()

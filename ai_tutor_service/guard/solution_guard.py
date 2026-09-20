@@ -100,20 +100,22 @@ class SolutionGuard:
         """
         Strict structural validation of the guard response.
 
-        Fail-closed: any structural invalidity (wrong type, missing key)
-        raises GuardTechnicalError so the candidate is never shown as a
-        result of a parse fallback.  ``contains_solution`` must be a bool
-        and ``reason`` must be a str (the LLM prompt requests a non-empty
-        reason; an empty string is still a structurally valid str and is
-        passed through verbatim — the critical invariant enforced here is
-        that an invalid structure NEVER silently becomes ``False``).
+        Fail-closed: any structural invalidity (wrong type, missing key,
+        empty/whitespace-only reason) raises GuardTechnicalError so the
+        candidate is never shown as a result of a parse fallback.
+        ``contains_solution`` must be a bool and ``reason`` must be a
+        non-empty str (the LLM prompt requests a non-empty reason; a
+        blank reason is a malformed verdict, not a valid one — the
+        critical invariant enforced here is that an invalid structure
+        NEVER silently becomes ``False``).
         """
         if not isinstance(raw.get("contains_solution"), bool):
             raise GuardTechnicalError(
                 message="Guard response missing or invalid contains_solution",
                 error_type="malformed_response",
             )
-        if not isinstance(raw.get("reason"), str):
+        reason = raw.get("reason")
+        if not isinstance(reason, str) or not reason.strip():
             raise GuardTechnicalError(
                 message="Guard response missing or invalid reason",
                 error_type="malformed_response",
