@@ -1,6 +1,7 @@
 # impl: FR-002-01
 # impl: FR-002-02
 # impl: FR-002-03
+# impl: FR-002-08
 # impl: FR-002-10
 """
 AI Tutor XBlock - student gate, ask/history JSON handlers, local error mapping.
@@ -337,7 +338,7 @@ class AiTutorXBlock(XBlock):
             status_code, _, _, _ = _service_error_map(exc)
             raise JsonHandlerError(status_code, json.dumps(envelope))
 
-        return {
+        result_dict = {
             "status": result.status,
             "answer": result.answer,
             "topic": result.topic,
@@ -349,6 +350,10 @@ class AiTutorXBlock(XBlock):
             "config_version": result.config_version,
             "can_retry": False,
         }
+        # Add blocked_reason only for blocked status (as per T-042 requirement)
+        if result.status == "blocked":
+            result_dict["blocked_reason"] = result.blocked_reason
+        return result_dict
 
     def history(self, request, suffix=""):
         """

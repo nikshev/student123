@@ -2,7 +2,7 @@
 
 <!-- ГЕНЕРУЄТЬСЯ scripts/trace.py — не редагувати вручну -->
 
-Вимог: **30** · задач: **93** (виконано 78) · вимог у роботі: **7** · порушень: **0**
+Вимог: **30** · задач: **93** (виконано 79) · вимог у роботі: **6** · порушень: **0**
 
 ## 001-bunny-video
 
@@ -36,7 +36,7 @@
 | `FR-002-05` | Репетитор MUST NOT давати готових розв'язань навчальних завдань; він MUST пояснювати підхід до розв'язання. | `T-035`, `T-036` | `ai_tutor_service/tutoring/policy.py`, `ai_tutor_service/tutoring/pipeline.py` | `ai_tutor_service/tests/unit/test_tutoring_policy.py` |
 | `FR-002-06` | Відповідь із готовим розв'язанням навчального завдання MUST блокуватися автоматично до показу учневі. | `T-037`, `T-038` | `ai_tutor_service/tutoring/pipeline.py`, `ai_tutor_service/guard/solution_guard.py` | `ai_tutor_service/tests/contract/test_solution_guard.py` |
 | `FR-002-07` | Кожен факт блокування MUST бути записаний у лог: учень, курс, юніт, питання, час. | `T-039`, `T-040` | `ai_tutor_service/tutoring/pipeline.py`, `ai_tutor_service/guard/audit.py` | `ai_tutor_service/tests/integration/test_block_record.py` |
-| `FR-002-08` | Після блокування учень MUST бачити зрозуміле пояснення правила («допомагаю розібратися, а не розв'язую за тебе | `T-041`, `T-042` | — | `ai_tutor_xblock/tests/contract/test_blocked_response.py` |
+| `FR-002-08` | Після блокування учень MUST бачити зрозуміле пояснення правила («допомагаю розібратися, а не розв'язую за тебе | `T-041`, `T-042` | `ai_tutor_xblock/ai_tutor_xblock/block.py` | `ai_tutor_xblock/tests/contract/test_blocked_response.py` |
 | `FR-002-09` | Кожен запит до репетитора MUST фіксуватися в подіях як первинний запис: учень, курс, юніт, час, тема питання — | `T-045`, `T-046`, `T-047`, `T-048` | — | — |
 | `FR-002-10` | Відповідь MUST надходити протягом 30 секунд у звичайних умовах; якщо сервіс тимчасово недоступний, учень MUST  | `T-003`, `T-004`, `T-011`, `T-012`, `T-013`, `T-014`, `T-025`, `T-026` | `tutor-plugin/plugin.yml`, `ai_tutor_xblock/ai_tutor_xblock/client.py`, `ai_tutor_xblock/ai_tutor_xblock/block.py`, `ai_tutor_xblock/ai_tutor_xblock/__init__.py`, `ai_tutor_service/providers/client.py`, `ai_tutor_service/providers/__init__.py` | `ai_tutor_xblock/tests/contract/test_tutor_service_client.py`, `ai_tutor_xblock/tests/contract/test_handlers.py`, `tests/architecture/test_ai_tutor_tutor_plugin.py`, `ai_tutor_service/tests/contract/test_llm_client.py` |
 | `FR-002-11` | Кількість запитів на учня MUST бути обмежена добовим лімітом; при досягненні ліміту учень MUST бачити поясненн | `T-007`, `T-008`, `T-021`, `T-022` | `ai_tutor_service/tutor_config.yaml`, `ai_tutor_service/config.py`, `ai_tutor_service/limits/service.py` | `ai_tutor_service/tests/unit/test_daily_quota.py`, `ai_tutor_service/tests/unit/test_tutor_config.py` |

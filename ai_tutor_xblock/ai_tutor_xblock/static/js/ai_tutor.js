@@ -185,6 +185,8 @@ function attachChatAdapter(rootElement, reducer) {
         return null;
     }
 
+    const reformulateButton = rootElement.querySelector('[data-reformulate]');
+
     let currentState = reducer.createInitialState();
 
     function render(nextState) {
@@ -193,6 +195,9 @@ function attachChatAdapter(rootElement, reducer) {
         const announcer = rootElement.querySelector('[aria-live]');
         if (announcer && currentState.message) {
             announcer.textContent = currentState.message;
+        }
+        if (reformulateButton) {
+            reformulateButton.style.display = currentState.ui === 'BLOCKED' ? '' : 'none';
         }
     }
 
@@ -210,6 +215,13 @@ function attachChatAdapter(rootElement, reducer) {
         });
         render(next);
     });
+
+    if (reformulateButton) {
+        reformulateButton.addEventListener('click', function () {
+            const next = reducer.reduce(currentState, { type: 'RESET' });
+            render(next);
+        });
+    }
 
     render(currentState);
     return { getState: function () { return currentState; } };

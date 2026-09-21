@@ -2,12 +2,13 @@
      data-state="loading"
      data-config-version="{{ config_version }}"
      data-materials-status="{{ materials_status }}">
-  <div class="ai-tutor-chat__messages" aria-live="polite"></div>
-  <form class="ai-tutor-chat__form"
-        data-ask-url="{{ ask_url }}"
-        data-history-url="{{ history_url }}">
-    <label for="ai-tutor-question">Ваше питання до репетитора</label>
-    <textarea id="ai-tutor-question" name="question"></textarea>
-    <button type="submit">Запитати</button>
-  </form>
+   <div class="ai-tutor-chat__messages" aria-live="polite"></div>
+   <form class="ai-tutor-chat__form"
+         data-ask-url="{{ ask_url }}"
+         data-history-url="{{ history_url }}">
+     <label for="ai-tutor-question">Ваше питання до репетитора</label>
+     <textarea id="ai-tutor-question" name="question"></textarea>
+     <button type="submit">Запитати</button>
+     <button type="button" class="ai-tutor-chat__reformulate" data-reformulate>Переформулювати</button>
+   </form>
 </div>
