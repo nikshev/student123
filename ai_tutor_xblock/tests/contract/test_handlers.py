@@ -101,9 +101,13 @@ class LMSRuntime:
         self.user = user
         self.course_id = course_id
         self.is_author_mode = False
+        self.publish_calls = []
 
     def _is_enrolled(self, user, course_id):
         return True
+
+    def publish(self, event_type, data):
+        self.publish_calls.append((event_type, data))
 
 
 class StudioRuntime(LMSRuntime):

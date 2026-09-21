@@ -3,6 +3,7 @@
 # impl: FR-002-03
 # impl: FR-002-08
 # impl: FR-002-10
+# impl: FR-002-09
 """
 AI Tutor XBlock - student gate, ask/history JSON handlers, local error mapping.
 
@@ -36,6 +37,7 @@ from .client import (
     UnauthorizedError,
 )
 from .guards import EnrollmentGuard, GuardResult
+from .tracking import TrackingPublisher
 
 
 # ---- Local error/status mapping (xblock-interface.md §2) ----
@@ -241,6 +243,7 @@ class AiTutorXBlock(XBlock):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._config_cache = None
+        self._tracker = TrackingPublisher(self.runtime, self.scope_ids)
 
     def _check_enrollment(self) -> GuardResult:
         """
@@ -323,6 +326,18 @@ class AiTutorXBlock(XBlock):
         course_id = self.runtime.course_id
         unit_usage_key = str(self.scope_ids.usage_id)
 
+        # FR-002-09 tracking: asked published after guard/validation, before service
+        self._tracker.publish_asked(
+            user_id=user_id,
+            request_id=request_id,
+            course_id=course_id,
+            unit_usage_key=unit_usage_key,
+            question=question,
+            topic="other",
+            conversation_id=conversation_id,
+            config_version=config.config_version,
+        )
+
         try:
             result = client.ask(
                 question=question,
@@ -337,6 +352,32 @@ class AiTutorXBlock(XBlock):
             envelope = _service_error_envelope(exc, body, config.config_version)
             status_code, _, _, _ = _service_error_map(exc)
             raise JsonHandlerError(status_code, json.dumps(envelope))
+
+        # FR-002-09 tracking: outcome events after service response
+        if result.status == "shown":
+            self._tracker.publish_shown(
+                user_id=user_id,
+                answer=result.answer,
+                topic=result.topic,
+                course_id=course_id,
+                unit_usage_key=unit_usage_key,
+                request_id=request_id,
+                conversation_id=result.conversation_id,
+                config_version=config.config_version,
+                latency_ms=result.latency_ms,
+            )
+        elif result.status == "blocked":
+            self._tracker.publish_blocked(
+                user_id=user_id,
+                blocked_reason=result.blocked_reason,
+                course_id=course_id,
+                unit_usage_key=unit_usage_key,
+                request_id=request_id,
+                question=question,
+                topic=result.topic,
+                conversation_id=result.conversation_id,
+                config_version=config.config_version,
+            )
 
         result_dict = {
             "status": result.status,
