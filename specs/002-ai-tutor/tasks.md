@@ -138,7 +138,8 @@
 
 ## Phase 7: Polish
 
-- [ ] T-053 [FR-002-13] Запусти повний offline release suite: pytest `ai_tutor_service/tests/`, pytest `ai_tutor_xblock/tests/`, jest `ai_tutor_xblock/tests/js/`, architecture/deployment tests, `python3 scripts/trace.py --check`; переконайся, що все зелене без socket/DNS, потім згенеруй `docs/traceability.md` командою `python3 scripts/trace.py` і повторно запусти регресійні pytest/jest фічі 001.
+- [x] T-053 [FR-002-13] Запусти повний offline release suite: pytest `ai_tutor_service/tests/`, pytest `ai_tutor_xblock/tests/`, jest `ai_tutor_xblock/tests/js/`, architecture/deployment tests, `python3 scripts/trace.py --check`; переконайся, що все зелене без socket/DNS, потім згенеруй `docs/traceability.md` командою `python3 scripts/trace.py` і повторно запусти регресійні pytest/jest фічі 001.
+  примітка T-053: офлайн-реліз прогнано оркестратором: ai_tutor_service 468 passed; ai_tutor_xblock 144 passed; jest 29 passed; architecture 17 passed (+ 3 чесно червоні людського гейту S10); trace --check ok; docs/traceability.md перегенеровано; регресія 001: video_xblock jest 42 passed (001-pytest у форматі nosetests/legacy — відсутній у runnable-вигляді; архітектурні тести 001 зелені). Мережа в тестах заборонена (conftest deny-by-default).
 - [ ] T-054 [FR-002-13] Пройди `specs/002-ai-tutor/quickstart.md` S0–S13 як release checklist: автоматизовані fixture-сценарії фіксуються зеленими, live/manual S0/S1/S10/S12 виконує людина; S10 записує рішення в `specs/002-ai-tutor/gate-decisions/`, і без human go реліз живим учням залишається заблокованим.
 
 ---
