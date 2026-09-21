@@ -374,7 +374,7 @@ def _validate_config(config):
 
 def load_tutor_config(path):
     """
-    Load and validate the versioned AI Tutor config from ``path``.
+    Load the tutor config (YAML) and validate it.
 
     The result is cached: each path is read and validated only once per
     process, so the bundled config is loaded once on service startup. Any
@@ -396,3 +396,13 @@ def load_tutor_config(path):
     config = _validate_config(raw)
     _CONFIG_CACHE[key] = config
     return config
+
+
+def get_config():
+    """Get the tutor configuration as an attribute-accessible object.
+
+    Returns a SimpleNamespace wrapping the dict from load_tutor_config(),
+    so callers can use ``config.conversation_ttl_days`` style access.
+    """
+    import types
+    return types.SimpleNamespace(**load_tutor_config(DEFAULT_CONFIG_PATH))

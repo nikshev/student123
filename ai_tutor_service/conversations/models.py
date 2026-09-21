@@ -37,13 +37,19 @@ class Conversation(models.Model):
         return f"Conversation({self.user_id} @ {self.course_id}/{self.unit_usage_key})"
 
     def save(self, *args, **kwargs):
-        # Compute expires_at from config on creation
-        if not self.pk and not self.expires_at:
+        # Compute expires_at from config on creation.
+        # Use _state.adding (not self.pk) because UUIDField default
+        # generates a PK on __init__, so self.pk is always truthy for
+        # new instances — checking self.pk would block all creates.
+        # We use timezone.now() here, not self.created_at, because
+        # auto_now_add is applied in super().save() → pre_save, which
+        # runs AFTER our custom code.
+        if self._state.adding and not self.expires_at:
             from ai_tutor_service.config import get_config
             config = get_config()
             from datetime import timedelta
             from django.utils import timezone
-            self.expires_at = self.created_at + timedelta(days=config.conversation_ttl_days)
+            self.expires_at = timezone.now() + timedelta(days=config.conversation_ttl_days)
         super().save(*args, **kwargs)
 
     def clean(self):
@@ -162,3 +168,33 @@ class Message(models.Model):
 
         # latency_ms >= 0 for terminal tutor messages (enforced by PositiveIntegerField)
         # route default is "default" (enforced by field default)
+
+
+class AuditRecord(models.Model):
+    """
+    Append-only audit record for authorized ops read of conversation history.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    actor = models.CharField(max_length=255, blank=False, null=False)
+    conversation_id = models.UUIDField(blank=False, null=False)
+    action = models.CharField(max_length=50, blank=False, null=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["conversation_id", "created_at"]),
+        ]
+        # Append-only: no UPDATE/DELETE in normal operation
+
+    def __str__(self):
+        return f"AuditRecord({self.actor} -> {self.conversation_id} ({self.action}))"
+
+    def save(self, *args, **kwargs):
+        # Append-only: prevent updates
+        if not self._state.adding:
+            raise ValidationError("AuditRecord is append-only and cannot be updated.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("AuditRecord is append-only and cannot be deleted.")

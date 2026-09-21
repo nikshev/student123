@@ -92,7 +92,7 @@ def _conversation(**kwargs):
 def _message(conversation, **kwargs):
     """Create a Message with safe defaults."""
     defaults = {
-        "conversation": conversation,
+        "conversation_id": conversation,
         "role": Message.Role.STUDENT,
         "text": "safe question",
         "status": Message.Status.ASKED,
@@ -163,7 +163,7 @@ def test_purge_deletes_expired_conversation_and_messages_cascade():
     purge_expired()
 
     assert Conversation.objects.filter(pk=conversation.pk).count() == 0
-    assert Message.objects.filter(conversation=conversation).count() == 0
+    assert Message.objects.filter(conversation_id=conversation).count() == 0
     with pytest.raises(Conversation.DoesNotExist):
         Conversation.objects.get(pk=conversation.pk)
 
@@ -185,7 +185,7 @@ def test_purge_leaves_active_conversation_and_messages():
     purge_expired()
 
     assert Conversation.objects.filter(pk=conversation.pk).count() == 1
-    assert Message.objects.filter(conversation=conversation).count() == 2
+    assert Message.objects.filter(conversation_id=conversation).count() == 2
 
 
 @pytest.mark.django_db
@@ -199,9 +199,10 @@ def test_purge_is_idempotent_and_repeatable():
     first = purge_expired()
     second = purge_expired()
 
-    assert first == second
+    assert first == 1
+    assert second == 0
     assert Conversation.objects.filter(pk=conversation.pk).count() == 0
-    assert Message.objects.filter(conversation=conversation).count() == 0
+    assert Message.objects.filter(conversation_id=conversation).count() == 0
 
 
 @pytest.mark.django_db
@@ -216,7 +217,7 @@ def test_management_command_purge_expired_tutor_data_exists_and_is_repeatable():
     call_command("purge_expired_tutor_data")
 
     assert Conversation.objects.filter(pk=conversation.pk).count() == 0
-    assert Message.objects.filter(conversation=conversation).count() == 0
+    assert Message.objects.filter(conversation_id=conversation).count() == 0
 
 
 @pytest.mark.django_db
