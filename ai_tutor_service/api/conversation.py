@@ -28,6 +28,7 @@ from django.utils.decorators import method_decorator
 from ai_tutor_service.api.auth import require_student_context
 from ai_tutor_service.api.errors import conversation_not_found
 from ai_tutor_service.config import load_tutor_config
+from ai_tutor_service.conversations.access import authorize_staff_read
 from ai_tutor_service.conversations.models import Conversation, Message
 from ai_tutor_service.conversations.repository import (
     ActorMismatchError,
@@ -113,10 +114,32 @@ class ConversationHistoryView(View):
         request_id = str(uuid.uuid4())
 
         # Staff is never granted unaudited read access to conversation history.
-        # Authorized staff with audited ops/gate context is handled in T-052;
-        # here every staff request collapses into the same 404 envelope.
+        # Authorized staff with audited ops/gate context is handled here:
+        # the explicit trusted header X-AI-Tutor-Ops-Audit (non-empty value =
+        # audit-id/reason) must be present and the actor must be an authorized
+        # role. Staff without this header, or not authorized, collapse into the
+        # same 404 envelope so existence/ownership is indistinguishable.
         if actor.is_staff:
-            return conversation_not_found(request_id)
+            audit_header = request.META.get("HTTP_X_AI_TUTOR_OPS_AUDIT", "").strip()
+            if not audit_header:
+                return conversation_not_found(request_id)
+            # Identify the actor by their platform role (auth.py trusted header),
+            # which is the identity-policy name compared against authorized roles.
+            role = request.META.get("HTTP_X_AI_TUTOR_ROLE", "").strip().lower()
+            allowed, audit_record = authorize_staff_read(role, conversation_id)
+            if not allowed:
+                return conversation_not_found(request_id)
+            # Authorized: fall through to history. The audit record was
+            # written before the 200 response below.
+            try:
+                conversation, messages = get_conversation_history(
+                    conversation_id=conversation_id,
+                    user_id=actor.user_id,
+                    course_id=actor.course_id,
+                    unit_usage_key=actor.unit_usage_key,
+                )
+            except (ConversationNotFoundError, ActorMismatchError):
+                return conversation_not_found(request_id)
 
         try:
             conversation, messages = get_conversation_history(

@@ -304,21 +304,26 @@ def test_secrets_absent_from_db_records():
 def test_authorized_ops_read_is_audited():
     """Authorized ops/staff read of a conversation history writes audit record."""
     from ai_tutor_service.conversations.access import log_ops_read
+    from ai_tutor_service.conversations.models import AuditRecord
 
     conversation = _conversation()
 
-    log_ops_read(actor="staff-user", conversation_id=str(conversation.pk))
+    log_ops_read(actor="staff", conversation_id=str(conversation.pk))
 
     # The audit record must exist in the DB and be append-only.
-    assert conversation.pk is not None
+    assert AuditRecord.objects.filter(actor="staff", conversation_id=conversation.pk, action="read").exists()
 
 
 @pytest.mark.django_db
 def test_unauthorized_read_is_denied_without_audit():
     """Non-authorized access is denied and does not create an audit record."""
     from ai_tutor_service.conversations.access import log_ops_read
+    from ai_tutor_service.conversations.models import AuditRecord
 
     conversation = _conversation()
 
     with pytest.raises(PermissionError):
         log_ops_read(actor="regular-student", conversation_id=str(conversation.pk))
+
+    # Non-authorized access must not create an audit record.
+    assert not AuditRecord.objects.filter(conversation_id=conversation.pk).exists()
