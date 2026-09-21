@@ -29,8 +29,10 @@ from unittest.mock import Mock, patch
 
 import pytest
 from django.test import Client
+from django.db import OperationalError
 
 from ai_tutor_service.config import load_tutor_config
+from ai_tutor_service.providers.client import LLMError
 
 # Load config for testing
 CONFIG_PATH = Path(__file__).resolve().parents[3] / "ai_tutor_service" / "tutor_config.yaml"
@@ -289,6 +291,106 @@ class TestGateRunContract:
         _assert_gate_report_shape(data)
         assert data["sample_version"] == SAMPLE_VERSION
         assert data["config_version"] == CONFIG["version"]
+
+    def test_same_key_different_payload_returns_409(self):
+        """
+        Contract: same idempotency key with different payload → 409 conflict.
+        First request (key + valid payload) → 200, record stored.
+        Second request (same key, different payload) → 409 idempotency_conflict.
+        """
+        client = Client()
+        idempotency_key = str(uuid.uuid4())
+        headers = {
+            "HTTP_AUTHORIZATION": f"Bearer {BEARER}",
+            "HTTP_X_AI_TUTOR_ROLE": "staff",
+            "HTTP_IDEMPOTENCY_KEY": idempotency_key,
+        }
+
+        # First request with valid body → 200, record stored
+        response1 = client.post(
+            GATE_RUN_URL,
+            data=json.dumps({"sample_version": SAMPLE_VERSION, "route": "default"}),
+            content_type="application/json",
+            **headers,
+        )
+        assert response1.status_code == 200, (
+            f"Expected 200, got {response1.status_code}"
+        )
+
+        # Second request with same key but different payload → 409
+        response2 = client.post(
+            GATE_RUN_URL,
+            data=json.dumps({"sample_version": "9.9.9", "route": "default"}),
+            content_type="application/json",
+            **headers,
+        )
+        assert response2.status_code == 409, (
+            f"Expected 409, got {response2.status_code}"
+        )
+        data = json.loads(response2.content)
+        assert data["error"]["code"] == "idempotency_conflict", (
+            f"Expected 'idempotency_conflict', got '{data['error']['code']}'"
+        )
+
+    @pytest.mark.parametrize("error_type, expected_status, expected_code", [
+        ("timeout", 504, "timeout"),
+        ("malformed_response", 502, "invalid_upstream_response"),
+        ("provider_error", 502, "upstream_error"),
+    ])
+    def test_llm_error_mapping(self, error_type, expected_status, expected_code):
+        """
+        Contract: typed LLM guard errors map to specific HTTP status codes.
+        Monkeypatch GateEvaluator.run to raise LLMError; view maps to
+        504/502/502 with typed error codes (FR-002-13 regression).
+        """
+        with patch("ai_tutor_service.guard.gate.GateEvaluator.run") as mock_run:
+            mock_run.side_effect = LLMError("guard error", error_type)
+            client = Client()
+            headers = {
+                "HTTP_AUTHORIZATION": f"Bearer {BEARER}",
+                "HTTP_X_AI_TUTOR_ROLE": "staff",
+                "HTTP_IDEMPOTENCY_KEY": str(uuid.uuid4()),
+            }
+            response = client.post(
+                GATE_RUN_URL,
+                data=json.dumps({"sample_version": SAMPLE_VERSION, "route": "default"}),
+                content_type="application/json",
+                **headers,
+            )
+            assert response.status_code == expected_status, (
+                f"Expected {expected_status} for {error_type}, got {response.status_code}"
+            )
+            data = json.loads(response.content)
+            assert data["error"]["code"] == expected_code, (
+                f"Expected '{expected_code}' for {error_type}, got '{data['error']['code']}'"
+            )
+
+    def test_operational_error_returns_503(self):
+        """
+        Contract: OperationalError during gate evaluation → 503 service_unavailable.
+        Monkeypatch GateEvaluator.run to raise OperationalError.
+        """
+        with patch("ai_tutor_service.guard.gate.GateEvaluator.run") as mock_run:
+            mock_run.side_effect = OperationalError("DB error")
+            client = Client()
+            headers = {
+                "HTTP_AUTHORIZATION": f"Bearer {BEARER}",
+                "HTTP_X_AI_TUTOR_ROLE": "staff",
+                "HTTP_IDEMPOTENCY_KEY": str(uuid.uuid4()),
+            }
+            response = client.post(
+                GATE_RUN_URL,
+                data=json.dumps({"sample_version": SAMPLE_VERSION, "route": "default"}),
+                content_type="application/json",
+                **headers,
+            )
+            assert response.status_code == 503, (
+                f"Expected 503, got {response.status_code}"
+            )
+            data = json.loads(response.content)
+            assert data["error"]["code"] == "service_unavailable", (
+                f"Expected 'service_unavailable', got '{data['error']['code']}'"
+            )
 
     def test_file_has_verifies_marker(self):
         """Meta-test: verify this file has the correct verifies marker."""
