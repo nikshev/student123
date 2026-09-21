@@ -21,6 +21,30 @@
 name: openedx-student123
 
 services:
+  ############# Permissions fix (як у Tutor: fresh named volumes належать root,
+  # а mysql/mongodb/redis/elasticsearch працюють від непривілейованих юзерів) #############
+
+  permissions:
+    image: docker.io/busybox:1.36
+    restart: "no"
+    entrypoint: []
+    command:
+      - sh
+      - -c
+      - |
+        chown -R 999:999 /mnt/mysql /mnt/mongodb
+        chown -R 1000:1000 /mnt/redis /mnt/elasticsearch /mnt/lms /mnt/cms /mnt/media /mnt/aitutor
+        echo "permissions fixed"
+    volumes:
+      - mysql-data:/mnt/mysql
+      - mongodb-data:/mnt/mongodb
+      - redis-data:/mnt/redis
+      - elasticsearch-data:/mnt/elasticsearch
+      - lms-data:/mnt/lms
+      - cms-data:/mnt/cms
+      - openedx-media:/mnt/media
+      - ai-tutor-data:/mnt/aitutor
+
   ############# Infrastructure #############
 
   mysql:
@@ -32,10 +56,14 @@ services:
       --binlog-expire-logs-seconds=259200
       --mysql-native-password=ON
     restart: unless-stopped
+    user: "999:999"
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is not set (see .env.example)}
     volumes:
       - mysql-data:/var/lib/mysql
+    depends_on:
+      permissions:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
@@ -44,10 +72,15 @@ services:
 
   mongodb:
     image: docker.io/mongo:7.0.7
+    # Use WiredTiger in all environments, just like at edx.org
     command: mongod --storageEngine wiredTiger
     restart: unless-stopped
+    user: "999:999"
     volumes:
       - mongodb-data:/data/db
+    depends_on:
+      permissions:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -58,9 +91,13 @@ services:
     image: docker.io/redis:7.2.4
     command: redis-server /openedx/redis/config/redis.conf
     restart: unless-stopped
+    user: "1000:1000"
     volumes:
       - ./docker/redis/redis.conf:/openedx/redis/config/redis.conf:ro
       - redis-data:/openedx/redis/data
+    depends_on:
+      permissions:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -79,8 +116,12 @@ services:
         soft: -1
         hard: -1
     restart: unless-stopped
+    user: "1000:1000"
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
+    depends_on:
+      permissions:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
       interval: 20s
