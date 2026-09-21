@@ -37,12 +37,21 @@
     margin: 0 auto;
     padding: 48px 20px 80px;
   }
-  a.back {
+  nav.breadcrumb {
+    font-size: 0.85rem;
     color: var(--muted);
-    text-decoration: none;
-    font-size: 0.9rem;
+    margin-bottom: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35em;
   }
-  a.back:hover { text-decoration: underline; }
+  nav.breadcrumb a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  nav.breadcrumb a:hover { text-decoration: underline; }
+  nav.breadcrumb .crumb-sep { opacity: 0.6; }
+  nav.breadcrumb .crumb-current { color: var(--fg); }
   h1 {
     font-size: 1.5rem;
     margin: 12px 0 4px;
@@ -77,7 +86,11 @@
 </head>
 <body>
 <main>
-  <a class="back" href="../">← усі предмети</a>
+  <nav class="breadcrumb" aria-label="Навігація">
+    <a href="../">Головна</a>
+    <span class="crumb-sep" aria-hidden="true">→</span>
+    <span class="crumb-current" aria-current="page">Електротехніка та електромеханіка</span>
+  </nav>
   <h1>Електротехніка та електромеханіка</h1>
   <p class="lead">Розрахунки до курсу. Повзунки для кожного числа в задачі —
   сторінка перераховується наживо.</p>
