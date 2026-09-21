@@ -237,32 +237,6 @@ class MaterialsStatusView(View):
         return JsonResponse(status_data, status=200)
 
 
-class ConversationView(AuthenticatedView):
-    """
-    GET /api/v1/conversation/{id} - Get conversation history.
-
-    Requires: Bearer token + student context headers.
-    Returns: 501 Not Implemented (stub for T-018).
-    """
-
-    @require_student_context
-    def get(self, request: HttpRequest, conversation_id: str, *args: Any, **kwargs: Any) -> HttpResponse:
-        # TODO(T-018): Implement conversation history retrieval
-        logger.info(
-            "Conversation endpoint called (stub)",
-            extra={
-                "actor": request.ai_tutor_actor.to_dict(),
-                "conversation_id": conversation_id,
-            },
-        )
-
-        return make_error_response(
-            "service_unavailable",
-            status=501,
-            message="Endpoint not yet implemented",
-        )
-
-
 class ConfigView(AuthenticatedView):
     """
     GET /api/v1/config - Get public configuration projection.
@@ -329,6 +303,5 @@ class GateRunView(AuthenticatedView):
 ask_view = AskView.as_view()
 materials_view = MaterialsView.as_view()
 materials_status_view = MaterialsStatusView.as_view()
-conversation_view = ConversationView.as_view()
 config_view = ConfigView.as_view()
 gate_run_view = GateRunView.as_view()
