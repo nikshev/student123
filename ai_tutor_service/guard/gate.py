@@ -15,6 +15,7 @@ GateEvaluator stores thresholds from tutor_config.yaml and provides
 deterministic gate evaluation for reproducible testing.
 """
 
+import logging
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -25,6 +26,8 @@ from django.db import OperationalError
 from ai_tutor_service.config import load_tutor_config
 from ai_tutor_service.providers.models import LLMUsageLog
 from ai_tutor_service.providers.usage import record_usage
+
+logger = logging.getLogger(__name__)
 
 _DEFAULT_THRESHOLDS: Optional[Tuple[float, float]] = None
 

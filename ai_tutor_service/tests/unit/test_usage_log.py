@@ -420,12 +420,19 @@ class TestConfigVersionIsolation:
     def test_different_config_versions_aggregated_separately(self):
         """
         Records with different config versions are grouped and summed independently.
+
+        The v1.0.0 record is created via record_usage (matches current config).
+        The v1.1.0 record is created directly via ORM because record_usage
+        loud-fails on config_version mismatch — this is intentional protection
+        against silently mistariffing foreign-version records with current rates.
         """
+        from decimal import Decimal
+
         user_id = "student-version-test"
         config_v1 = "1.0.0"
         config_v2 = "1.1.0"
 
-        # Create record with v1.0.0
+        # Create record with v1.0.0 via record_usage (current config version)
         request_id_v1 = uuid.uuid4()
         record_usage(
             request_id=request_id_v1,
@@ -437,15 +444,20 @@ class TestConfigVersionIsolation:
             config_version=config_v1,
         )
 
-        # Create record with v1.1.0
+        # Create record with v1.1.0 directly via ORM — foreign version cannot
+        # be passed to record_usage because it would raise ValueError (loud-fail
+        # protection against silently applying current rates to historical data).
+        # Cost computed using same rates as current config for test purposes:
+        # (1000 * 0.25 + 500 * 1.25) / 1_000_000 = 875 / 1_000_000 = 0.000875
         request_id_v2 = uuid.uuid4()
-        record_usage(
+        LLMUsageLog.objects.create(
             request_id=request_id_v2,
             user_id=user_id,
+            model_id=CONFIG["model_id"],
             operation=LLMUsageLog.Operation.GENERATE,
             input_tokens=1000,
             output_tokens=500,
-            model_id=CONFIG["model_id"],
+            estimated_cost_usd=Decimal("0.000875"),
             config_version=config_v2,
         )
 
@@ -456,6 +468,22 @@ class TestConfigVersionIsolation:
         # Both should have records but may have different costs if rates differ
         assert cost_v1 > 0
         assert cost_v2 > 0
+
+    def test_record_usage_rejects_foreign_config_version(self):
+        """
+        record_usage loud-fails on config_version mismatch (захист від мовчазного mistariff).
+        """
+        with pytest.raises(ValueError) as exc_info:
+            record_usage(
+                request_id=uuid.uuid4(),
+                user_id="student-reject-test",
+                operation=LLMUsageLog.Operation.GENERATE,
+                input_tokens=100,
+                output_tokens=50,
+                model_id=CONFIG["model_id"],
+                config_version="9.9.9",
+            )
+        assert "config_version mismatch" in str(exc_info.value)
 
 
 # =============================================================================

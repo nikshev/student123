@@ -136,6 +136,8 @@ class TutoringPipeline:
                 question=question,
                 has_ready_materials=has_ready_materials,
                 retrieved_segments=segments,
+                user_id=user_id,
+                request_id=request_id,
             )
 
             if decision is not None:

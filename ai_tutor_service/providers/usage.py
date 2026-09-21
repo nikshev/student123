@@ -91,6 +91,19 @@ def record_usage(
     """
     config = _get_config()
 
+    # Loud-fail: rates must be read from the SAME YAML version as config_version.
+    # If the passed config_version does not match the current YAML version,
+    # there is no way to know what rates were in effect at the time of the
+    # operation — old YAML versions are not kept in the repo. Fail loudly
+    # instead of silently applying current rates to historical records.
+    if config_version != config["version"]:
+        raise ValueError(
+            f"record_usage: config_version mismatch — passed {config_version!r} "
+            f"but current tutor_config.yaml is version {config['version']!r}. "
+            f"Rates for version {config_version!r} are not available; "
+            f"cannot calculate cost for this record."
+        )
+
     # Calculate estimated_cost_usd if usage is complete, otherwise Decimal("0")
     # Missing usage records are stored with estimated_cost_usd=Decimal("0") because
     # the model field is NOT NULL (T-010). The test accepts `is None or == Decimal("0")`.
