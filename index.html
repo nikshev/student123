@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Інтерактивні розрахунки — предмети</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f7f7f9;
+    --fg: #1b1b1f;
+    --muted: #5b5b66;
+    --card-bg: #ffffff;
+    --card-border: #e2e2e8;
+    --accent: #2a5cff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14141a;
+      --fg: #eceef2;
+      --muted: #a2a2ae;
+      --card-bg: #1d1d24;
+      --card-border: #2d2d37;
+      --accent: #7aa2ff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+  }
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 48px 20px 80px;
+  }
+  h1 {
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+  }
+  p.lead {
+    color: var(--muted);
+    margin-top: 0;
+    margin-bottom: 32px;
+  }
+  ul.list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  li.card {
+    border: 1px solid var(--card-border);
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  li.card a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1.05rem;
+  }
+  li.card a:hover { text-decoration: underline; }
+  footer {
+    margin-top: 48px;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Інтерактивні розрахунки</h1>
+  <p class="lead">Список предметів. Кожен предмет має власні розрахунки —
+  повзунки для чисел у задачі, а не готову відповідь.</p>
+
+  <!-- Один предмет = один рядок нижче. -->
+  <ul class="list">
+    <li class="card">
+      <a href="elektrotekhnika/">Електротехніка та електромеханіка</a>
+    </li>
+  </ul>
+
+  <footer>Наступні предмети додаються по мірі готовності.</footer>
+</main>
+</body>
+</html>
