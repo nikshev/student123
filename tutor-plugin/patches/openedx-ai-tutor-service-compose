@@ -1,6 +1,9 @@
 # impl: FR-002-10
+# impl: FR-002-13
 # Окремий Django-процес для ai_tutor_service: власний compose-сервіс,
 # не воркер LMS. SQLite на постійному тому ai-tutor-data.
+# Release lock (FR-002-13): live enablement requires matching human go decision
+# in specs/002-ai-tutor/gate-decisions/. Change config/corpus invalidates decision.
 services:
   ai-tutor-service:
     image: "{{ DOCKER_IMAGE_OPENEDX }}"
@@ -9,9 +12,12 @@ services:
              python manage.py runserver 0.0.0.0:8001"
     volumes:
       - ai-tutor-data:/data
+      - ./specs/002-ai-tutor/gate-decisions:/gate-decisions:ro
     environment:
       AI_TUTOR_LLM_API_KEY: "{{ AI_TUTOR_LLM_API_KEY }}"
       AI_TUTOR_SHARED_SECRET: "{{ AI_TUTOR_SHARED_SECRET }}"
+      GATE_DECISIONS_DIR: "/gate-decisions"
+      AI_TUTOR_LIVE_MODE: "false"
     expose:
       - "8001"
 

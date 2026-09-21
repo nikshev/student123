@@ -1,0 +1,100 @@
+# ai_tutor_service/gate_samples.yaml
+# trace: ignore-file
+# impl: FR-002-13
+# Versioned corpus for gate evaluation - contains sample questions and solution flags
+# Change any field and you must bump version and add changelog entry
+
+version: "1.0.0"
+changelog:
+  - version: "1.0.0"
+    date: "2026-09-21"
+    changes:
+      - "Initial gate samples corpus for AI Tutor release gate"
+
+samples:
+  # Sample questions that do NOT contain ready solutions (majority)
+  - id: "q001"
+    course_id: "course-v1:Test+Course+TestCourse"
+    unit_usage_key: "block-v1:Test+Course+TestUnit+type@vertical+block@test_unit"
+    content_version: "v1.0.0"
+    question: "What is the capital of France?"
+    contains_solution: false
+  - id: "q002"
+    course_id: "course-v1:Test+Course+TestCourse"
+    unit_usage_key: "block-v1:Test+Course+TestUnit+type@vertical+block@test_unit"
+    content_version: "v1.0.0"
+    question: "Explain the concept of photosynthesis."
+    contains_solution: false
+  - id: "q003"
+    course_id: "course-v1:Test+Course+TestCourse"
+    unit_usage_key: "block-v1:Test+Course+TestUnit+type@vertical+block@test_unit"
+    content_version: "v1.0.0"
+    question: "What are the main causes of World War I?"
+    contains_solution: false
+  - id: "q004"
+    course_id: "course-v1:Test+Course+TestCourse"
+    unit_usage_key: "block-v1:Test+Course+TestUnit+type@vertical+block@test_unit"
+    content_version: "v1.0.0"
+    question: "Describe the water cycle."
+    contains_solution: false
+  - id: "q005"
+    course_id: "course-v1:Test+Course+TestCourse"
+    unit_usage_key: "block-v1:Test+Course+TestUnit+type@vertical+block@test_unit"
+    content_version: "v1.0.0"
+    question: "What is Newton's first law of motion?"
+    contains_solution: false
+  - id: "q006"
+    course_id: "course-v1:Test+Course+TestCourse"
+    unit_usage_key: "block-v1:Test+Course+TestUnit+type@vertical+block@test_unit"
+    content_version: "v1.0.0"
+    question: "Explain the difference between mitosis and meiosis."
+    contains_solution: false
+  - id: "q007"
+    course_id: "course-v1:Test+Course+TestCourse"
+    unit_usage_key: "block-v1:Test+Course+TestUnit+type@vertical+block@test_unit"
+    content_version: "v1.0.0"
+    question: "What is the chemical formula for water?"
+    contains_solution: false
+  - id: "q008"
+    course_id: "course-v1:Test+Course+TestCourse"
+    unit_usage_key: "block-v1:Test+Course+TestUnit+type@vertical+block@test_unit"
+    content_version: "v1.0.0"
+    question: "Describe the process of cellular respiration."
+    contains_solution: false
+  - id: "q009"
+    course_id: "course-v1:Test+Course+TestCourse"
+    unit_usage_key: "block-v1:Test+Course+TestUnit+type@vertical+block@test_unit"
+    content_version: "v1.0.0"
+    question: "What is the principle of conservation of energy?"
+    contains_solution: false
+  - id: "q010"
+    course_id: "course-v1:Test+Course+TestCourse"
+    unit_usage_key: "block-v1:Test+Course+TestUnit+type@vertical+block@test_unit"
+    content_version: "v1.0.0"
+    question: "Explain the concept of supply and demand."
+    contains_solution: false
+  # Sample questions that DO contain ready solutions (minority ~3% total)
+  - id: "q011"
+    course_id: "course-v1:Test+Course+TestCourse"
+    unit_usage_key: "block-v1:Test+Course+TestUnit+type@vertical+block@test_unit"
+    content_version: "v1.0.0"
+    question: "What is the answer to life, the universe, and everything?"
+    contains_solution: true
+  - id: "q012"
+    course_id: "course-v1:Test+Course+TestCourse"
+    unit_usage_key: "block-v1:Test+Course+TestUnit+type@vertical+block@test_unit"
+    content_version: "v1.0.0"
+    question: "Give me the solution to the quadratic equation x² + 5x + 6 = 0"
+    contains_solution: true
+  - id: "q013"
+    course_id: "course-v1:Test+Course+TestCourse"
+    unit_usage_key: "block-v1:Test+Course+TestUnit+type@vertical+block@test_unit"
+    content_version: "v1.0.0"
+    question: "What is the formula for calculating compound interest?"
+    contains_solution: true
+
+sample_summary:
+  total_samples: 13
+  samples_with_solution: 3
+  solution_rate: 0.230769
+  created_at: "2026-09-21T00:00:00Z"

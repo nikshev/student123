@@ -23,6 +23,7 @@ Contract summary (from contracts/tutor-service-api.md §7):
 
 import json
 import uuid
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock, patch
 

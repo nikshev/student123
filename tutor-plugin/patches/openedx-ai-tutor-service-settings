@@ -1,4 +1,9 @@
 # impl: FR-002-10
+# impl: FR-002-13
 # Внутрішній service URL для AI Tutor: LMS/XBlock викликають сервіс через
 # Docker-внутрішню мережу. Не локальний хост, не секрет — це deployment-конфіг.
+# Release lock (FR-002-13): live enablement requires matching human go decision
+# in specs/002-ai-tutor/gate-decisions/. Change config/corpus invalidates decision.
 AI_TUTOR_SERVICE_URL = "http://ai-tutor-service:8001"
+AI_TUTOR_LIVE_MODE = False
+GATE_DECISIONS_REQUIRED = True
