@@ -1,5 +1,7 @@
 # impl: FR-001-07
 # CSP для iframe Bunny player + Referrer-Policy, інакше domain-lock ламає плеєр
 # (quickstart S0, план «Constraints»).
-CSP_FRAME_SRC += ["https://player.mediadelivery.net"]
+# Plain assignment: django-csp читає CSP_FRAME_SRC через getattr, а в Redwood
+# edx-platform цю змінну за замовчуванням не визначає, тож += впав би з NameError.
+CSP_FRAME_SRC = ["https://player.mediadelivery.net"]
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
