@@ -9,9 +9,9 @@ from django.urls import path
 
 from ai_tutor_service.api.ask import ask_view
 from ai_tutor_service.api.gate import gate_run_view
+from ai_tutor_service.api.conversation import conversation_history_view
 from ai_tutor_service.api.views import (
     config_view,
-    conversation_view,
     materials_status_view,
     materials_view,
 )
@@ -26,7 +26,11 @@ urlpatterns = [
     # GET /api/v1/materials/status - Check materials status
     path("api/v1/materials/status", materials_status_view, name="materials_status"),
     # GET /api/v1/conversation/{id} - Get conversation history
-    path("api/v1/conversation/<uuid:conversation_id>", conversation_view, name="conversation"),
+    path(
+        "api/v1/conversation/<uuid:conversation_id>",
+        conversation_history_view,
+        name="conversation",
+    ),
     # GET /api/v1/config - Get public config
     path("api/v1/config", config_view, name="config"),
     # POST /api/v1/gate/run - Run gate evaluation

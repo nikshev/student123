@@ -237,8 +237,8 @@ class TestConversationContract:
     def test_conversation_with_invalid_bearer_returns_401(self):
         """Conversation with invalid Bearer -> 401."""
         client = Client()
-        headers = {"HTTP_AUTHORIZATION": f"Bearer invalid-secret"}
-        headers.update(_make_student_headers())
+        headers = _make_student_headers()
+        headers["HTTP_AUTHORIZATION"] = "Bearer invalid-secret"
         
         conv_id = str(uuid.uuid4())
         response = client.get(
