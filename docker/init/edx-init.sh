@@ -32,15 +32,15 @@ wait_tcp mongodb 27017
 wait_tcp redis 6379
 
 echo "== Міграції LMS =="
-./manage.py lms migrate --noinput --settings=lms.envs.tutor.production
+./manage.py lms migrate --noinput
 
 echo "== Міграції CMS =="
-./manage.py cms migrate --noinput --settings=cms.envs.tutor.production
+./manage.py cms migrate --noinput
 
 CMS_URL="http://studio.local.openedx.io:8001"
 echo "== OAuth-клієнт CMS SSO (cms-sso) =="
 ./manage.py lms manage_user cms cms@openedx --unusable-password \
-  --settings=lms.envs.tutor.production || true
+  || true
 ./manage.py lms create_dot_application \
   --grant-type authorization-code \
   --redirect-uris "${CMS_URL}/complete/edx-oauth2/" \
@@ -49,13 +49,13 @@ echo "== OAuth-клієнт CMS SSO (cms-sso) =="
   --scopes user_id \
   --skip-authorization \
   --update cms-sso cms \
-  --settings=lms.envs.tutor.production
+ 
 
 echo "== Суперкористувач ${ADMIN_USERNAME} =="
 ./manage.py lms manage_user "${ADMIN_USERNAME}" "${ADMIN_EMAIL}" \
   --staff --superuser --unusable-password \
-  --settings=lms.envs.tutor.production 2>/dev/null || true
-./manage.py lms shell --settings=lms.envs.tutor.production <<PYEOF
+  2>/dev/null || true
+./manage.py lms shell <<PYEOF
 from django.contrib.auth import get_user_model
 User = get_user_model()
 u = User.objects.get(username="${ADMIN_USERNAME}")
@@ -65,9 +65,9 @@ print("admin password set")
 PYEOF
 
 echo "== Waffle: completion tracking =="
-(./manage.py lms waffle_switch --list --settings=lms.envs.tutor.production \
+(./manage.py lms waffle_switch --list \
   | grep completion.enable_completion_tracking) \
   || ./manage.py lms waffle_switch --create completion.enable_completion_tracking on \
-  --settings=lms.envs.tutor.production
+ 
 
 echo "Ініціалізація завершена."

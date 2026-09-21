@@ -39,7 +39,7 @@ ENV LMS_CFG=/openedx/config-build/lms.env.yml \
     MYSQL_PASSWORD=buildtime-dummy \
     AI_TUTOR_SHARED_SECRET=buildtime-dummy
 
-RUN ./manage.py lms collectstatic --noinput --settings=lms.envs.tutor.production \
-    && ./manage.py cms collectstatic --noinput --settings=cms.envs.tutor.production
+RUN ./manage.py lms collectstatic --noinput --settings=tutor.production \
+    && ./manage.py cms collectstatic --noinput --settings=tutor.production
 
 # Default CMD береться з базового образу: ["uwsgi", "/openedx/uwsgi.ini"]

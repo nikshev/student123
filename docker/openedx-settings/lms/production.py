@@ -211,8 +211,10 @@ CODE_JAIL = {
 }
 
 # --- Repo plugins (mirror tutor-plugin/patches) ---
-# FR-001-07: CSP для iframe Bunny player + Referrer-Policy
-CSP_FRAME_SRC += ["https://player.mediadelivery.net"]
+# FR-001-07: CSP для iframe Bunny player + Referrer-Policy.
+# (Plain assignment: django-csp читає CSP_FRAME_SRC через getattr, а в Redwood
+# edx-platform цю змінну за замовчуванням не визначає, тож += впав би з NameError.)
+CSP_FRAME_SRC = ["https://player.mediadelivery.net"]
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 # FR-002-10: AI Tutor Service (внутрішній URL + секрети з env)
 AI_TUTOR_SERVICE_URL = os.environ.get("AI_TUTOR_SERVICE_URL", "http://ai-tutor-service:8001")
