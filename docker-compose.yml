@@ -1,0 +1,344 @@
+# docker-compose.yml — Open edX (Redwood, openedx 18.1.3) + плагіни репозиторію.
+#
+# Сервіси:
+#   lms, cms, lms-worker, cms-worker — Open edX, образ збирається з
+#       docker/edx-platform/Dockerfile (встановлює video_xblock і ai_tutor_xblock).
+#   ai-tutor-service — внутрішній AI Tutor Service (docker/ai-tutor-service/).
+#   mysql, mongodb, redis, elasticsearch, smtp — інфраструктура (версії як у Tutor 18).
+#   edx-init — одноразова ініціалізація (БД, міграції, OAuth, суперкористувач);
+#       lms/cms стартують лише після її успішного завершення.
+#
+# Швидкий старт — див. docker/README.md:
+#   cp .env.example .env
+#   ./docker/init/init-secrets.sh   # згенерувати секрети (або заповнити .env вручну)
+#   # вписати AI_TUTOR_LLM_API_KEY у .env
+#   docker compose build
+#   docker compose up -d
+#
+# LMS:  http://local.openedx.io:8000   CMS (Studio): http://studio.local.openedx.io:8001
+# (обидва хости резолвяться в 127.0.0.1 без записів у /etc/hosts)
+
+name: openedx-student123
+
+services:
+  ############# Infrastructure #############
+
+  mysql:
+    image: docker.io/mysql:8.4.0
+    command: >
+      mysqld
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --binlog-expire-logs-seconds=259200
+      --mysql-native-password=ON
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is not set (see .env.example)}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  mongodb:
+    image: docker.io/mongo:7.0.7
+    command: mongod --storageEngine wiredTiger
+    restart: unless-stopped
+    volumes:
+      - mongodb-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: docker.io/redis:7.2.4
+    command: redis-server /openedx/redis/config/redis.conf
+    restart: unless-stopped
+    volumes:
+      - ./docker/redis/redis.conf:/openedx/redis/config/redis.conf:ro
+      - redis-data:/openedx/redis/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  elasticsearch:
+    image: docker.io/elasticsearch:7.17.13
+    environment:
+      - cluster.name=openedx
+      - bootstrap.memory_lock=true
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    restart: unless-stopped
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 12
+
+  smtp:
+    image: docker.io/devture/exim-relay:4.96-r1-0
+    restart: unless-stopped
+    environment:
+      HOSTNAME: ${LMS_HOST:-local.openedx.io}
+
+  ############# One-shot init (migrations, OAuth, superuser) #############
+
+  edx-init:
+    build:
+      context: .
+      dockerfile: docker/edx-platform/Dockerfile
+    image: openedx-student123:latest
+    restart: "no"
+    entrypoint: ["/bin/bash", "/opt/edx-init/edx-init.sh"]
+    environment:
+      SERVICE_VARIANT: lms
+      DJANGO_SETTINGS_MODULE: lms.envs.tutor.production
+      LMS_CFG: /openedx/config/lms.env.yml
+      CMS_CFG: /openedx/config/cms.env.yml
+      REVISION_CFG: /openedx/config/revisions.yml
+      OPENEDX_SECRET_KEY: ${OPENEDX_SECRET_KEY:?OPENEDX_SECRET_KEY is not set}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-openedx}
+      MYSQL_USER: ${MYSQL_USER:-openedx}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is not set}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is not set}
+      JWT_PRIVATE_SIGNING_JWK_JSON: ${JWT_PRIVATE_SIGNING_JWK_JSON:?run docker/init/init-secrets.sh}
+      JWT_PUBLIC_SIGNING_JWK_SET_JSON: ${JWT_PUBLIC_SIGNING_JWK_SET_JSON:?run docker/init/init-secrets.sh}
+      JWT_COMMON_SECRET_KEY: ${JWT_COMMON_SECRET_KEY:?JWT_COMMON_SECRET_KEY is not set}
+      CMS_OAUTH2_KEY_SSO: cms-sso
+      CMS_OAUTH2_SECRET: ${CMS_OAUTH2_SECRET:?CMS_OAUTH2_SECRET is not set}
+      LMS_HOST: ${LMS_HOST:-local.openedx.io}
+      CMS_HOST: ${CMS_HOST:-studio.local.openedx.io}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is not set}
+    volumes:
+      - ./docker/openedx-settings/lms:/openedx/edx-platform/lms/envs/tutor:ro
+      - ./docker/openedx-settings/cms:/openedx/edx-platform/cms/envs/tutor:ro
+      - ./docker/openedx-config:/openedx/config:ro
+      - ./docker/init:/opt/edx-init:ro
+      - lms-data:/openedx/data
+      - openedx-media:/openedx/media
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ############# LMS and CMS #############
+
+  lms:
+    build:
+      context: .
+      dockerfile: docker/edx-platform/Dockerfile
+    image: openedx-student123:latest
+    restart: unless-stopped
+    environment:
+      SERVICE_VARIANT: lms
+      DJANGO_SETTINGS_MODULE: lms.envs.tutor.production
+      LMS_CFG: /openedx/config/lms.env.yml
+      CMS_CFG: /openedx/config/cms.env.yml
+      REVISION_CFG: /openedx/config/revisions.yml
+      UWSGI_WORKERS: ${UWSGI_WORKERS:-2}
+      OPENEDX_SECRET_KEY: ${OPENEDX_SECRET_KEY:?OPENEDX_SECRET_KEY is not set}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-openedx}
+      MYSQL_USER: ${MYSQL_USER:-openedx}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is not set}
+      JWT_PRIVATE_SIGNING_JWK_JSON: ${JWT_PRIVATE_SIGNING_JWK_JSON:?run docker/init/init-secrets.sh}
+      JWT_PUBLIC_SIGNING_JWK_SET_JSON: ${JWT_PUBLIC_SIGNING_JWK_SET_JSON:?run docker/init/init-secrets.sh}
+      JWT_COMMON_SECRET_KEY: ${JWT_COMMON_SECRET_KEY:?JWT_COMMON_SECRET_KEY is not set}
+      LMS_HOST: ${LMS_HOST:-local.openedx.io}
+      CMS_HOST: ${CMS_HOST:-studio.local.openedx.io}
+      AI_TUTOR_SERVICE_URL: http://ai-tutor-service:8001
+      AI_TUTOR_LLM_API_KEY: ${AI_TUTOR_LLM_API_KEY:-}
+      AI_TUTOR_SHARED_SECRET: ${AI_TUTOR_SHARED_SECRET:?AI_TUTOR_SHARED_SECRET is not set}
+    volumes:
+      - ./docker/openedx-settings/lms:/openedx/edx-platform/lms/envs/tutor:ro
+      - ./docker/openedx-settings/cms:/openedx/edx-platform/cms/envs/tutor:ro
+      - ./docker/openedx-config:/openedx/config:ro
+      - ./docker/openedx-settings/uwsgi.ini:/openedx/uwsgi.ini:ro
+      - lms-data:/openedx/data
+      - openedx-media:/openedx/media
+    ports:
+      - "8000:8000"
+    depends_on:
+      edx-init:
+        condition: service_completed_successfully
+      mysql:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      smtp:
+        condition: service_started
+
+  cms:
+    build:
+      context: .
+      dockerfile: docker/edx-platform/Dockerfile
+    image: openedx-student123:latest
+    restart: unless-stopped
+    environment:
+      SERVICE_VARIANT: cms
+      DJANGO_SETTINGS_MODULE: cms.envs.tutor.production
+      LMS_CFG: /openedx/config/lms.env.yml
+      CMS_CFG: /openedx/config/cms.env.yml
+      REVISION_CFG: /openedx/config/revisions.yml
+      UWSGI_WORKERS: ${UWSGI_WORKERS:-2}
+      OPENEDX_SECRET_KEY: ${OPENEDX_SECRET_KEY:?OPENEDX_SECRET_KEY is not set}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-openedx}
+      MYSQL_USER: ${MYSQL_USER:-openedx}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is not set}
+      JWT_PRIVATE_SIGNING_JWK_JSON: ${JWT_PRIVATE_SIGNING_JWK_JSON:?run docker/init/init-secrets.sh}
+      JWT_PUBLIC_SIGNING_JWK_SET_JSON: ${JWT_PUBLIC_SIGNING_JWK_SET_JSON:?run docker/init/init-secrets.sh}
+      JWT_COMMON_SECRET_KEY: ${JWT_COMMON_SECRET_KEY:?JWT_COMMON_SECRET_KEY is not set}
+      CMS_OAUTH2_SECRET: ${CMS_OAUTH2_SECRET:?CMS_OAUTH2_SECRET is not set}
+      LMS_HOST: ${LMS_HOST:-local.openedx.io}
+      CMS_HOST: ${CMS_HOST:-studio.local.openedx.io}
+      AI_TUTOR_SERVICE_URL: http://ai-tutor-service:8001
+      AI_TUTOR_LLM_API_KEY: ${AI_TUTOR_LLM_API_KEY:-}
+      AI_TUTOR_SHARED_SECRET: ${AI_TUTOR_SHARED_SECRET:?AI_TUTOR_SHARED_SECRET is not set}
+    volumes:
+      - ./docker/openedx-settings/lms:/openedx/edx-platform/lms/envs/tutor:ro
+      - ./docker/openedx-settings/cms:/openedx/edx-platform/cms/envs/tutor:ro
+      - ./docker/openedx-config:/openedx/config:ro
+      - ./docker/openedx-settings/uwsgi.ini:/openedx/uwsgi.ini:ro
+      - cms-data:/openedx/data
+      - openedx-media:/openedx/media
+    ports:
+      - "8001:8000"
+    depends_on:
+      edx-init:
+        condition: service_completed_successfully
+      lms:
+        condition: service_started
+      mysql:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      smtp:
+        condition: service_started
+
+  lms-worker:
+    build:
+      context: .
+      dockerfile: docker/edx-platform/Dockerfile
+    image: openedx-student123:latest
+    restart: unless-stopped
+    environment:
+      SERVICE_VARIANT: lms
+      DJANGO_SETTINGS_MODULE: lms.envs.tutor.production
+      LMS_CFG: /openedx/config/lms.env.yml
+      CMS_CFG: /openedx/config/cms.env.yml
+      REVISION_CFG: /openedx/config/revisions.yml
+      OPENEDX_SECRET_KEY: ${OPENEDX_SECRET_KEY:?OPENEDX_SECRET_KEY is not set}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-openedx}
+      MYSQL_USER: ${MYSQL_USER:-openedx}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is not set}
+      JWT_PRIVATE_SIGNING_JWK_JSON: ${JWT_PRIVATE_SIGNING_JWK_JSON:?run docker/init/init-secrets.sh}
+      JWT_PUBLIC_SIGNING_JWK_SET_JSON: ${JWT_PUBLIC_SIGNING_JWK_SET_JSON:?run docker/init/init-secrets.sh}
+      JWT_COMMON_SECRET_KEY: ${JWT_COMMON_SECRET_KEY:?JWT_COMMON_SECRET_KEY is not set}
+      LMS_HOST: ${LMS_HOST:-local.openedx.io}
+      CMS_HOST: ${CMS_HOST:-studio.local.openedx.io}
+      AI_TUTOR_SERVICE_URL: http://ai-tutor-service:8001
+      AI_TUTOR_LLM_API_KEY: ${AI_TUTOR_LLM_API_KEY:-}
+      AI_TUTOR_SHARED_SECRET: ${AI_TUTOR_SHARED_SECRET:?AI_TUTOR_SHARED_SECRET is not set}
+    command: celery --app=lms.celery worker --loglevel=info --hostname=edx.lms.core.default.%h --max-tasks-per-child=100 --exclude-queues=edx.cms.core.default
+    volumes:
+      - ./docker/openedx-settings/lms:/openedx/edx-platform/lms/envs/tutor:ro
+      - ./docker/openedx-settings/cms:/openedx/edx-platform/cms/envs/tutor:ro
+      - ./docker/openedx-config:/openedx/config:ro
+      - lms-data:/openedx/data
+      - openedx-media:/openedx/media
+    depends_on:
+      lms:
+        condition: service_started
+
+  cms-worker:
+    build:
+      context: .
+      dockerfile: docker/edx-platform/Dockerfile
+    image: openedx-student123:latest
+    restart: unless-stopped
+    environment:
+      SERVICE_VARIANT: cms
+      DJANGO_SETTINGS_MODULE: cms.envs.tutor.production
+      LMS_CFG: /openedx/config/lms.env.yml
+      CMS_CFG: /openedx/config/cms.env.yml
+      REVISION_CFG: /openedx/config/revisions.yml
+      OPENEDX_SECRET_KEY: ${OPENEDX_SECRET_KEY:?OPENEDX_SECRET_KEY is not set}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-openedx}
+      MYSQL_USER: ${MYSQL_USER:-openedx}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is not set}
+      JWT_PRIVATE_SIGNING_JWK_JSON: ${JWT_PRIVATE_SIGNING_JWK_JSON:?run docker/init/init-secrets.sh}
+      JWT_PUBLIC_SIGNING_JWK_SET_JSON: ${JWT_PUBLIC_SIGNING_JWK_SET_JSON:?run docker/init/init-secrets.sh}
+      JWT_COMMON_SECRET_KEY: ${JWT_COMMON_SECRET_KEY:?JWT_COMMON_SECRET_KEY is not set}
+      LMS_HOST: ${LMS_HOST:-local.openedx.io}
+      CMS_HOST: ${CMS_HOST:-studio.local.openedx.io}
+    volumes:
+      - ./docker/openedx-settings/lms:/openedx/edx-platform/lms/envs/tutor:ro
+      - ./docker/openedx-settings/cms:/openedx/edx-platform/cms/envs/tutor:ro
+      - ./docker/openedx-config:/openedx/config:ro
+      - cms-data:/openedx/data
+      - openedx-media:/openedx/media
+    depends_on:
+      cms:
+        condition: service_started
+
+  ############# AI Tutor Service (наш плагін, FR-002-10) #############
+
+  ai-tutor-service:
+    build:
+      context: .
+      dockerfile: docker/ai-tutor-service/Dockerfile
+    image: ai-tutor-service-student123:latest
+    restart: unless-stopped
+    environment:
+      DJANGO_SETTINGS_MODULE: settings_production
+      SECRET_KEY: ${OPENEDX_SECRET_KEY:?OPENEDX_SECRET_KEY is not set}
+      AI_TUTOR_LLM_API_KEY: ${AI_TUTOR_LLM_API_KEY:-}
+      AI_TUTOR_SHARED_SECRET: ${AI_TUTOR_SHARED_SECRET:?AI_TUTOR_SHARED_SECRET is not set}
+    volumes:
+      - ai-tutor-data:/data
+    ports:
+      - "8002:8001"
+
+volumes:
+  mysql-data:
+  mongodb-data:
+  redis-data:
+  elasticsearch-data:
+  lms-data:
+  cms-data:
+  openedx-media:
+  ai-tutor-data:

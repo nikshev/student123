@@ -1,0 +1,5 @@
+# docker/openedx-config/revisions.yml — мінімальний аналог Tutor-генерованого
+# revisions.yml (див. tutor/templates/build/openedx/revisions.yml).
+# edx-platform читає його через REVISION_CFG (необов'язкові ключі).
+EDX_PLATFORM_REVISION: "openedx-student123"
+EDX_PLATFORM_VERSION: "18.1.3"
