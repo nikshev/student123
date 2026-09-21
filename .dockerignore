@@ -1,0 +1,9 @@
+# .dockerignore — не тягнути сміття в контекст збірки edxapp-образа
+# (особливо node_modules — сотні мегабайтів і симлінки, що ламають COPY).
+**/node_modules
+**/__pycache__
+**/*.pyc
+**/tests
+.git
+.vault
+graphify-out

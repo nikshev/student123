@@ -4,6 +4,13 @@ version = "0.1.0"
 description = "AI Tutor XBlock for Open edX — unit-level AI tutor chat and interaction"
 requires-python = ">=3.11"
 
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["ai_tutor_xblock*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
