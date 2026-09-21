@@ -152,6 +152,12 @@ class TestShownFlow:
         asked_idx = event_types.index("xblock-ai-tutor.question.asked")
         shown_idx = event_types.index("xblock-ai-tutor.answer.shown")
         assert asked_idx < shown_idx, "asked must be published before shown"
+        # Verify shown payload has question field
+        shown_event = next(c for c in runtime.publish_calls 
+                           if c[0] == "xblock-ai-tutor.answer.shown")
+        assert shown_event[1]["question"] == QUESTION
+        assert "answer" not in shown_event[1]
+        assert "candidate" not in shown_event[1]
 
     def test_asked_has_correct_payload(self):
         """asked payload contains request_id, conversation, topic, server identity."""
@@ -208,8 +214,8 @@ class TestBlockedFlow:
         blocked_event = next(c for c in runtime.publish_calls 
                            if c[0] == "xblock-ai-tutor.answer.blocked")
         payload = blocked_event[1]
-        assert payload["answer"] is not None
-        assert "candidate" not in payload or payload.get("candidate") is None
+        assert "answer" not in payload
+        assert "candidate" not in payload
 
     def test_blocked_has_blocked_reason(self):
         """blocked event must have non-empty blocked_reason."""

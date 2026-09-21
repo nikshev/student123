@@ -33,7 +33,7 @@ class TrackingPublisher:
 
     def build_shown_payload(self, user_id, course_id, unit_usage_key, request_id,
                             question, topic, conversation_id, config_version,
-                            answer=None, latency_ms=0):
+                            latency_ms=0):
         return {
             "user_id": user_id,
             "course_id": course_id,
@@ -46,8 +46,6 @@ class TrackingPublisher:
             "latency_ms": latency_ms,
             "blocked_reason": None,
             "config_version": config_version,
-            "answer": answer,
-            "candidate": None,
         }
 
     def build_blocked_payload(self, user_id, course_id, unit_usage_key, request_id,
@@ -64,8 +62,6 @@ class TrackingPublisher:
             "latency_ms": None,
             "blocked_reason": blocked_reason,
             "config_version": config_version,
-            "answer": blocked_reason,
-            "candidate": None,
         }
 
     def publish_asked(self, user_id, request_id, course_id=None, unit_usage_key=None,
@@ -89,7 +85,7 @@ class TrackingPublisher:
         self.runtime.publish(self.EVENT_ASKED, payload)
         self._asked_request_ids.add(request_id)
 
-    def publish_shown(self, user_id, answer, topic, course_id=None, unit_usage_key=None,
+    def publish_shown(self, user_id, answer, question, topic, course_id=None, unit_usage_key=None,
                       request_id=None, conversation_id=None, config_version="unknown",
                       latency_ms=0):
         """Publish a shown event after successful service response."""
@@ -98,11 +94,10 @@ class TrackingPublisher:
             course_id=course_id or "",
             unit_usage_key=unit_usage_key or "",
             request_id=request_id,
-            question=None,
+            question=question,
             topic=topic,
             conversation_id=conversation_id,
             config_version=config_version,
-            answer=answer,
             latency_ms=latency_ms,
         )
         self.runtime.publish(self.EVENT_SHOWN, payload)

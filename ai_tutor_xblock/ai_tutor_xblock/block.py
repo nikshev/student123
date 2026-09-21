@@ -15,6 +15,7 @@ successful projection for that request and cannot be stale/cached here.
 """
 
 import json
+import logging
 import uuid
 from pathlib import Path
 
@@ -101,6 +102,8 @@ _HISTORY_ERROR_MAP = {
     **_ERROR_MAP,
     ForbiddenError: (404, "conversation_not_found", "Діалог не знайдено", False),
 }
+
+_logger = logging.getLogger(__name__)
 
 
 def _make_client() -> TutorServiceClient:
@@ -327,16 +330,33 @@ class AiTutorXBlock(XBlock):
         unit_usage_key = str(self.scope_ids.usage_id)
 
         # FR-002-09 tracking: asked published after guard/validation, before service
-        self._tracker.publish_asked(
-            user_id=user_id,
-            request_id=request_id,
-            course_id=course_id,
-            unit_usage_key=unit_usage_key,
-            question=question,
-            topic="other",
-            conversation_id=conversation_id,
-            config_version=config.config_version,
-        )
+        try:
+            self._tracker.publish_asked(
+                user_id=user_id,
+                request_id=request_id,
+                course_id=course_id,
+                unit_usage_key=unit_usage_key,
+                question=question,
+                topic="other",
+                conversation_id=conversation_id,
+                config_version=config.config_version,
+            )
+        except Exception:
+            _logger.error(
+                "tracking publish failed",
+                extra={"request_id": request_id, "event_type": "asked"},
+            )
+            raise JsonHandlerError(
+                503,
+                json.dumps({
+                    "status": "error",
+                    "error_code": "publish_failed",
+                    "message": _GENERIC_SERVICE_MESSAGE,
+                    "can_retry": True,
+                    "request_id": request_id,
+                    "config_version": config.config_version,
+                }),
+            )
 
         try:
             result = client.ask(
@@ -355,29 +375,64 @@ class AiTutorXBlock(XBlock):
 
         # FR-002-09 tracking: outcome events after service response
         if result.status == "shown":
-            self._tracker.publish_shown(
-                user_id=user_id,
-                answer=result.answer,
-                topic=result.topic,
-                course_id=course_id,
-                unit_usage_key=unit_usage_key,
-                request_id=request_id,
-                conversation_id=result.conversation_id,
-                config_version=config.config_version,
-                latency_ms=result.latency_ms,
-            )
+            try:
+                self._tracker.publish_shown(
+                    user_id=user_id,
+                    answer=result.answer,
+                    question=question,
+                    topic=result.topic,
+                    course_id=course_id,
+                    unit_usage_key=unit_usage_key,
+                    request_id=request_id,
+                    conversation_id=result.conversation_id,
+                    config_version=config.config_version,
+                    latency_ms=result.latency_ms,
+                )
+            except Exception:
+                _logger.error(
+                    "tracking publish failed",
+                    extra={"request_id": request_id, "event_type": "shown"},
+                )
+                raise JsonHandlerError(
+                    503,
+                    json.dumps({
+                        "status": "error",
+                        "error_code": "publish_failed",
+                        "message": _GENERIC_SERVICE_MESSAGE,
+                        "can_retry": True,
+                        "request_id": request_id,
+                        "config_version": config.config_version,
+                    }),
+                )
         elif result.status == "blocked":
-            self._tracker.publish_blocked(
-                user_id=user_id,
-                blocked_reason=result.blocked_reason,
-                course_id=course_id,
-                unit_usage_key=unit_usage_key,
-                request_id=request_id,
-                question=question,
-                topic=result.topic,
-                conversation_id=result.conversation_id,
-                config_version=config.config_version,
-            )
+            try:
+                self._tracker.publish_blocked(
+                    user_id=user_id,
+                    blocked_reason=result.blocked_reason,
+                    course_id=course_id,
+                    unit_usage_key=unit_usage_key,
+                    request_id=request_id,
+                    question=question,
+                    topic=result.topic,
+                    conversation_id=result.conversation_id,
+                    config_version=config.config_version,
+                )
+            except Exception:
+                _logger.error(
+                    "tracking publish failed",
+                    extra={"request_id": request_id, "event_type": "blocked"},
+                )
+                raise JsonHandlerError(
+                    503,
+                    json.dumps({
+                        "status": "error",
+                        "error_code": "publish_failed",
+                        "message": _GENERIC_SERVICE_MESSAGE,
+                        "can_retry": True,
+                        "request_id": request_id,
+                        "config_version": config.config_version,
+                    }),
+                )
 
         result_dict = {
             "status": result.status,

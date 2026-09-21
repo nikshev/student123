@@ -96,9 +96,10 @@ class TestTrackingPublisherUnit:
             latency_ms=1840, config_version="1.0.0",
         )
         assert payload["event_type"] == "shown"
-        assert "answer" in payload
-        assert payload["candidate"] is None or "candidate" not in payload
+        assert "answer" not in payload
+        assert "candidate" not in payload
         assert isinstance(payload["latency_ms"], int) and payload["latency_ms"] >= 0
+        assert payload["question"] == "test?"
 
     def test_blocked_payload_schema(self):
         """blocked payload: answer=rule, candidate nowhere, blocked_reason non-empty."""
@@ -114,8 +115,8 @@ class TestTrackingPublisherUnit:
         )
         assert payload["event_type"] == "blocked"
         assert payload["blocked_reason"] == "ready solution"
-        assert payload["answer"] is not None
-        assert "candidate" not in payload or payload.get("candidate") is None
+        assert "answer" not in payload
+        assert "candidate" not in payload
 
     def test_asked_after_guard_before_service(self):
         """asked published after guard/validation, before service call."""
@@ -133,11 +134,11 @@ class TestTrackingPublisherUnit:
             pytest.fail("ModuleNotFoundError — tracking.py missing (T-045 red)")
         runtime = StubRuntime()
         tp = TrackingPublisher(runtime)
-        tp.publish_shown(user_id="12345", answer="safe answer", topic="other")
+        tp.publish_shown(user_id="12345", answer="safe answer", topic="other", question="test?")
         assert len(runtime.publish_calls) == 1
         assert runtime.publish_calls[0][0] == "xblock-ai-tutor.answer.shown"
         event = runtime.publish_calls[0][1]
-        assert "candidate" not in event or event.get("candidate") is None
+        assert "candidate" not in event
 
     def test_blocked_only_after_durable_ack(self):
         """blocked event only after durable BlockRecord acknowledgement."""
