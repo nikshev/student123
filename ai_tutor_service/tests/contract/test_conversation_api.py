@@ -450,6 +450,57 @@ class TestConversationContract:
         assert conversation_id not in response_text
         assert USER_A not in response_text
 
+    def test_staff_with_audit_header_gets_history_and_audit_record(self):
+        """
+        Staff with valid audit header gets conversation history and creates audit record.
+        - staff headers + HTTP_X_AI_TUTOR_OPS_AUDIT + student context headers
+        - Existing conversation → 200
+        - AuditRecord.objects.filter(conversation_id=<id>).exists() must be True
+        - Response has standard 200 schema with matching conversation_id
+        """
+        client = Client()
+
+        # Create conversation with some history
+        conv = _seed_conversation(
+            user_id=USER_A,
+            messages=[
+                _make_message("student", QUESTION_1, "asked"),
+                _make_message(
+                    "tutor",
+                    "Це пояснення.",
+                    "shown",
+                    sources=[{"kind": "notes", "source_ref": "notes#u1"}],
+                ),
+            ],
+        )
+        conversation_id = str(conv.id)
+
+        # Staff with audit header + student context of conversation owner
+        headers = _make_staff_headers()
+        headers["HTTP_X_AI_TUTOR_OPS_AUDIT"] = "ops-review-1"
+        headers.update(_make_student_headers(USER_A))  # Match conversation owner
+
+        response = _get_conversation(client, conversation_id, headers)
+
+        # Should succeed for authorized staff with audit context
+        data = _assert_conversation_envelope(response, 200)
+
+        # Validate conversation ID matches
+        assert data["conversation_id"] == conversation_id
+
+        # Validate we get the seeded messages back
+        assert len(data["messages"]) == 2
+        assert data["messages"][0]["role"] == "student"  # First message
+        assert data["messages"][1]["role"] == "tutor"   # Second message
+
+        # Verify audit record was created
+        from ai_tutor_service.conversations.models import AuditRecord
+        assert AuditRecord.objects.filter(
+            conversation_id=conv.id,
+            actor="staff",
+            action="read"
+        ).exists()
+
     def test_xblock_history_does_not_cache(self):
         """
         XBlock history does not cache: two sequential GETs after new ask show fresh data.

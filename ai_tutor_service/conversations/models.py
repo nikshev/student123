@@ -183,7 +183,7 @@ class AuditRecord(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=["conversation_id", "created_at"], name="conversation_conversation_id_created_at_idx"),
+            models.Index(fields=["conversation_id", "created_at"], name="conv_audit_cid_created_idx"),
         ]
         # Append-only: no UPDATE/DELETE in normal operation
 

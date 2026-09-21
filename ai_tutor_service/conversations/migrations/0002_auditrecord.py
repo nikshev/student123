@@ -22,8 +22,8 @@ class Migration(migrations.Migration):
                 ('action', models.CharField(max_length=50)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
             ],
-            options={
-                'indexes': [models.Index(fields=['conversation_id', 'created_at'], name='conversation_conversation_id_created_at_idx')],
-            },
+    options={
+        'indexes': [models.Index(fields=['conversation_id', 'created_at'], name='conv_audit_cid_created_idx')],
+    },
         ),
     ]
