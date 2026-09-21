@@ -87,8 +87,8 @@ def _assert_gate_report_shape(data):
     
     # Validate UUIDs
     uuid.UUID(data["run_id"])
-    uuid.UUID(data["sample_version"])  # Actually string, but should be valid version format
-    uuid.UUID(data["config_version"])
+    assert data["sample_version"] == SAMPLE_VERSION
+    assert data["config_version"] == CONFIG["version"]
     
     # Validate types
     assert isinstance(data["total"], int) and data["total"] >= 0
@@ -179,7 +179,7 @@ class TestGateRunContract:
         headers = {
             "HTTP_AUTHORIZATION": f"Bearer {BEARER}",
             "HTTP_X_AI_TUTOR_ROLE": "staff",
-            "HTTP_IDEMPOTENCY_KEY": str(uuid4()),
+            "HTTP_IDEMPOTENCY_KEY": str(uuid.uuid4()),
         }
         
         # Test wrong sample_version
@@ -207,7 +207,7 @@ class TestGateRunContract:
         Contract: Idempotent retry with same key returns same result (no duplicate counting).
         """
         client = Client()
-        idempotency_key = str(uuid4())
+        idempotency_key = str(uuid.uuid4())
         headers = {
             "HTTP_AUTHORIZATION": f"Bearer {BEARER}",
             "HTTP_X_AI_TUTOR_ROLE": "staff",
@@ -230,32 +230,47 @@ class TestGateRunContract:
             **headers,
         )
         
-        # Both should succeed (when implemented) and return identical results
-        # Currently both return 501, but test will check for identical shape when fixed
+        # Both should succeed (200) and return identical results (same report, no duplicate run)
+        assert response1.status_code == 200
+        assert response2.status_code == 200
         data1 = json.loads(response1.content)
         data2 = json.loads(response2.content)
-        
-        # For now, check that both have same error structure (will change when implemented)
-        assert "error" in data1
-        assert "error" in data2
+        assert data1["run_id"] == data2["run_id"]
+        assert data1["sample_version"] == data2["sample_version"]
+        assert data1["rate"] == data2["rate"]
+        assert data1["verdict"] == data2["verdict"]
 
     def test_no_student_side_effects(self):
         """
         Contract: gate evaluation has no student side effects (no conversation/quota/tracking events).
         """
-        # This would be validated via database/checking that no Message/Conversation/DailyCounter records created
-        pass  # Will be implemented in integration tests
+        client = Client()
+        headers = {
+            "HTTP_AUTHORIZATION": f"Bearer {BEARER}",
+            "HTTP_X_AI_TUTOR_ROLE": "staff",
+            "HTTP_IDEMPOTENCY_KEY": str(uuid.uuid4()),
+        }
+        client.post(
+            GATE_RUN_URL,
+            data=json.dumps({"sample_version": SAMPLE_VERSION, "route": "default"}),
+            content_type="application/json",
+            **headers,
+        )
+        from ai_tutor_service.conversations.models import Conversation, Message
+        from ai_tutor_service.limits.models import DailyCounter
+        assert Conversation.objects.count() == 0
+        assert Message.objects.count() == 0
+        assert DailyCounter.objects.count() == 0
 
     def test_gate_report_matches_contract(self):
         """
         Contract: 200 response matches gate report shape with correct verdict calculation.
-        Currently expects 501 stub (to be replaced with real implementation).
         """
         client = Client()
         headers = {
             "HTTP_AUTHORIZATION": f"Bearer {BEARER}",
             "HTTP_X_AI_TUTOR_ROLE": "staff",
-            "HTTP_IDEMPOTENCY_KEY": str(uuid4()),
+            "HTTP_IDEMPOTENCY_KEY": str(uuid.uuid4()),
         }
         
         response = client.post(
@@ -265,17 +280,14 @@ class TestGateRunContract:
             **headers,
         )
         
-        # Current state: endpoint returns 501 Not Implemented (stub)
-        # Test should fail when endpoint returns 501 instead of proper gate report
-        assert response.status_code == 501, (
-            "Gate endpoint currently returns 501 stub (T-044 not implemented). "
-            "This test expects a proper gate report (200) once implemented."
+        assert response.status_code == 200, (
+            f"Gate endpoint must return 200 with gate report, got {response.status_code}: {response.content[:200]}"
         )
         
         data = json.loads(response.content)
-        assert "error" in data
-        assert data["error"]["code"] == "service_unavailable"
-        assert data["error"]["message"] == "Endpoint not yet implemented"
+        _assert_gate_report_shape(data)
+        assert data["sample_version"] == SAMPLE_VERSION
+        assert data["config_version"] == CONFIG["version"]
 
     def test_file_has_verifies_marker(self):
         """Meta-test: verify this file has the correct verifies marker."""
@@ -285,4 +297,3 @@ class TestGateRunContract:
 
 
 # File marker for traceability
-# impl: FR-002-13
