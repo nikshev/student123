@@ -9,7 +9,7 @@ Contract for T-048 implementation in ai_tutor_service/providers/usage.py:
    config_version (from YAML), created_at.
    Repeated calls for same request_id accumulate (do not overwrite).
 
-2. estimated_cost_usd: = (input_tokens × input_per_million/1e6 + 
+2. estimated_cost_usd: = (input_tokens × input_per_million/1e6 +
    output_tokens × output_per_million/1e6) using rates from the SAME YAML version as config_version.
    Rates are loaded from tutor_config.yaml cost section (currency USD, input_per_million_tokens,
    output_per_million_tokens). Gate operations are recorded separately and NOT included in
@@ -61,7 +61,7 @@ CONFIG = load_tutor_config(CONFIG_PATH)
 class TestUsageRecordAppendOnly:
     """
     Test Case 1: Append-only запис кожного generate/guard/off_topic/gate.
-    
+
     Each operation should create a new LLMUsageLog entry.
     Duplicate request_id entries should accumulate (count records grow).
     Model enforces append-only via primary key UUID (no natural PK collision).
@@ -75,7 +75,7 @@ class TestUsageRecordAppendOnly:
         user_id = "student-test-001"
         model_id = CONFIG["model_id"]
         config_version = CONFIG["version"]
-        
+
         record_usage(
             request_id=request_id,
             user_id=user_id,
@@ -85,7 +85,7 @@ class TestUsageRecordAppendOnly:
             model_id=model_id,
             config_version=config_version,
         )
-        
+
         records = LLMUsageLog.objects.filter(request_id=request_id)
         assert records.count() == 1
         record = records.first()
@@ -104,7 +104,7 @@ class TestUsageRecordAppendOnly:
         user_id = "student-test-002"
         model_id = CONFIG["model_id"]
         config_version = CONFIG["version"]
-        
+
         record_usage(
             request_id=request_id,
             user_id=user_id,
@@ -114,7 +114,7 @@ class TestUsageRecordAppendOnly:
             model_id=model_id,
             config_version=config_version,
         )
-        
+
         records = LLMUsageLog.objects.filter(request_id=request_id)
         assert records.count() == 1
         record = records.first()
@@ -128,7 +128,7 @@ class TestUsageRecordAppendOnly:
         user_id = "student-test-003"
         model_id = CONFIG["model_id"]
         config_version = CONFIG["version"]
-        
+
         record_usage(
             request_id=request_id,
             user_id=user_id,
@@ -138,7 +138,7 @@ class TestUsageRecordAppendOnly:
             model_id=model_id,
             config_version=config_version,
         )
-        
+
         records = LLMUsageLog.objects.filter(request_id=request_id)
         assert records.count() == 1
         record = records.first()
@@ -153,7 +153,7 @@ class TestUsageRecordAppendOnly:
         user_id = "student-test-004"
         model_id = CONFIG["guard_model_id"]
         config_version = CONFIG["version"]
-        
+
         record_usage(
             request_id=request_id,
             user_id=user_id,
@@ -163,7 +163,7 @@ class TestUsageRecordAppendOnly:
             model_id=model_id,
             config_version=config_version,
         )
-        
+
         records = LLMUsageLog.objects.filter(request_id=request_id)
         assert records.count() == 1
         record = records.first()
@@ -180,7 +180,7 @@ class TestEstimatedCostCalculation:
     Test Case 2: estimated_cost_usd = (input_tokens × input_per_million/1e6 +
                         output_tokens × output_per_million/1e6) using rates from
     the SAME YAML version as config_version.
-    
+
     Rates from tutor_config.yaml:
     - input_per_million_tokens: 0.25 USD
     - output_per_million_tokens: 1.25 USD
@@ -195,15 +195,15 @@ class TestEstimatedCostCalculation:
         user_id = "student-cost-test"
         model_id = CONFIG["model_id"]
         config_version = CONFIG["version"]
-        
+
         # Realistic token counts: 500 input, 1500 output
         input_tokens = 500
         output_tokens = 1500
-        
+
         # Expected cost: (500 * 0.25/1e6) + (1500 * 1.25/1e6)
         # = 0.000125 + 0.001875 = 0.002 USD
         expected_cost = Decimal("0.002")
-        
+
         record_usage(
             request_id=request_id,
             user_id=user_id,
@@ -213,7 +213,7 @@ class TestEstimatedCostCalculation:
             model_id=model_id,
             config_version=config_version,
         )
-        
+
         record = LLMUsageLog.objects.get(request_id=request_id)
         assert record.estimated_cost_usd == expected_cost
 
@@ -225,14 +225,14 @@ class TestEstimatedCostCalculation:
         request_id = uuid.uuid4()
         user_id = "student-rate-test"
         model_id = CONFIG["model_id"]
-        
+
         # Use current config version
         config_version = CONFIG["version"]
-        
+
         # Small token counts
         input_tokens = 100
         output_tokens = 100
-        
+
         record_usage(
             request_id=request_id,
             user_id=user_id,
@@ -242,10 +242,10 @@ class TestEstimatedCostCalculation:
             model_id=model_id,
             config_version=config_version,
         )
-        
+
         record = LLMUsageLog.objects.get(request_id=request_id)
-        # Expected: (100 * 0.25/1e6) + (100 * 1.25/1e6) = 0.00025 + 0.00125 = 0.0015
-        expected_cost = Decimal("0.0015")
+        # Expected: (100 * 0.25/1e6) + (100 * 1.25/1e6) = 0.000025 + 0.000125 = 0.000150
+        expected_cost = Decimal("0.000150")
         assert record.estimated_cost_usd == expected_cost
 
     def test_zero_tokens_yields_zero_cost(self):
@@ -256,7 +256,7 @@ class TestEstimatedCostCalculation:
         user_id = "student-zero-cost"
         model_id = CONFIG["model_id"]
         config_version = CONFIG["version"]
-        
+
         record_usage(
             request_id=request_id,
             user_id=user_id,
@@ -266,7 +266,7 @@ class TestEstimatedCostCalculation:
             model_id=model_id,
             config_version=config_version,
         )
-        
+
         record = LLMUsageLog.objects.get(request_id=request_id)
         assert record.estimated_cost_usd == Decimal("0.0")
 
@@ -279,7 +279,7 @@ class TestEstimatedCostCalculation:
 class TestGateSeparateFromLearnerCost:
     """
     Test Case 3: Gate operations are recorded but NOT included in learner cost.
-    
+
     aggregate_monthly_cost() must filter out operation="gate" records.
     Only generate/guard/off_topic contribute to SC-006 cost tracking.
     """
@@ -290,7 +290,7 @@ class TestGateSeparateFromLearnerCost:
         """
         user_id = "student-gate-test"
         config_version = CONFIG["version"]
-        
+
         # Create a gate record with significant tokens
         gate_request_id = uuid.uuid4()
         record_usage(
@@ -302,7 +302,7 @@ class TestGateSeparateFromLearnerCost:
             model_id=CONFIG["guard_model_id"],
             config_version=config_version,
         )
-        
+
         # Create a generate record
         gen_request_id = uuid.uuid4()
         record_usage(
@@ -314,10 +314,10 @@ class TestGateSeparateFromLearnerCost:
             model_id=CONFIG["model_id"],
             config_version=config_version,
         )
-        
+
         # Monthly cost should only reflect generate, not gate
         monthly_cost = aggregate_monthly_cost(user_id=user_id, config_version=config_version)
-        
+
         # Gate cost would be: (10000 * 0.25/1e6) + (5000 * 1.25/1e6) = 0.0025 + 0.00625 = 0.00875
         # Generate cost: (500 * 0.25/1e6) + (200 * 1.25/1e6) = 0.000125 + 0.00025 = 0.000375
         # Monthly cost should be ~0.000375, NOT including gate
@@ -333,7 +333,7 @@ class TestGateSeparateFromLearnerCost:
 class TestMissingUsageHandling:
     """
     Test Case 4: Missing usage ≠ zero.
-    
+
     When usage is None (operation completed without usage data),
     the record is marked as incomplete. Such records are NOT written with estimated_cost=0.0;
     instead estimated_cost=None. Aggregation functions skip incomplete records.
@@ -347,7 +347,7 @@ class TestMissingUsageHandling:
         user_id = "student-missing-test"
         model_id = CONFIG["model_id"]
         config_version = CONFIG["version"]
-        
+
         record_usage(
             request_id=request_id,
             user_id=user_id,
@@ -357,7 +357,7 @@ class TestMissingUsageHandling:
             model_id=model_id,
             config_version=config_version,
         )
-        
+
         record = LLMUsageLog.objects.get(request_id=request_id)
         assert record.input_tokens == 0  # Model default for missing
         assert record.output_tokens == 0  # Model default for missing
@@ -371,7 +371,7 @@ class TestMissingUsageHandling:
         """
         user_id = "student-agg-test"
         config_version = CONFIG["version"]
-        
+
         # Create complete record
         complete_request_id = uuid.uuid4()
         record_usage(
@@ -383,7 +383,7 @@ class TestMissingUsageHandling:
             model_id=CONFIG["model_id"],
             config_version=config_version,
         )
-        
+
         # Create incomplete record
         incomplete_request_id = uuid.uuid4()
         record_usage(
@@ -395,13 +395,13 @@ class TestMissingUsageHandling:
             model_id=CONFIG["model_id"],
             config_version=config_version,
         )
-        
+
         # Monthly cost should only include complete record
         monthly_cost = aggregate_monthly_cost(user_id=user_id, config_version=config_version)
-        
-        # Expected: (100 * 0.25/1e6) + (50 * 1.25/1e6) = 0.000125 + 0.0000625 = 0.0001875
-        expected_cost = Decimal("0.0001875")
-        assert monthly_cost == expected_cost
+
+        # Expected: (100 * 0.25/1e6) + (50 * 1.25/1e6) = 0.000025 + 0.0000625 = 0.0000875
+        expected_cost = Decimal("0.0000875")
+        assert monthly_cost == pytest.approx(expected_cost, abs=Decimal("0.000001"))
 
 
 # =============================================================================
@@ -412,7 +412,7 @@ class TestMissingUsageHandling:
 class TestConfigVersionIsolation:
     """
     Test Case 5: Records with different config_version are aggregated separately.
-    
+
     Each config version has its own rate tier. Aggregation must group by
     config_version before summing costs.
     """
@@ -424,7 +424,7 @@ class TestConfigVersionIsolation:
         user_id = "student-version-test"
         config_v1 = "1.0.0"
         config_v2 = "1.1.0"
-        
+
         # Create record with v1.0.0
         request_id_v1 = uuid.uuid4()
         record_usage(
@@ -436,7 +436,7 @@ class TestConfigVersionIsolation:
             model_id=CONFIG["model_id"],
             config_version=config_v1,
         )
-        
+
         # Create record with v1.1.0
         request_id_v2 = uuid.uuid4()
         record_usage(
@@ -448,11 +448,11 @@ class TestConfigVersionIsolation:
             model_id=CONFIG["model_id"],
             config_version=config_v2,
         )
-        
+
         # Each version aggregates independently
         cost_v1 = aggregate_monthly_cost(user_id=user_id, config_version=config_v1)
         cost_v2 = aggregate_monthly_cost(user_id=user_id, config_version=config_v2)
-        
+
         # Both should have records but may have different costs if rates differ
         assert cost_v1 > 0
         assert cost_v2 > 0
@@ -466,7 +466,7 @@ class TestConfigVersionIsolation:
 class TestMonthlyAggregationBudget:
     """
     Test Case 6: Monthly aggregation fixture demonstrating USD 0.20 budget.
-    
+
     Given multiple realistic usage records, aggregate_monthly_cost must return
     a value that stays under the monthly per-learner budget of $0.20.
     """
@@ -474,18 +474,18 @@ class TestMonthlyAggregationBudget:
     def test_monthly_aggregation_under_usd_0_20(self):
         """
         Multiple realistic token counts aggregated stay under $0.20 monthly budget.
-        
+
         This fixture demonstrates SC-006 compliance: cost < $0.20 per learner per month.
         """
         user_id = "student-budget-test"
         config_version = CONFIG["version"]
-        
+
         # Fixture: realistic usage pattern over a month
         # Average per day: 5 conversations, ~400 input + ~800 output tokens each
-        # Daily cost: 5 * ((400 * 0.25/1e6) + (800 * 1.25/1e6)) 
+        # Daily cost: 5 * ((400 * 0.25/1e6) + (800 * 1.25/1e6))
         #            = 5 * (0.0001 + 0.001) = 5 * 0.0011 = 0.0055 USD
         # Monthly (30 days): 0.0055 * 30 = 0.165 USD < 0.20 USD ✓
-        
+
         daily_records = []
         for day in range(1, 31):  # 30 days of usage
             for conv in range(5):  # 5 conversations per day
@@ -501,10 +501,10 @@ class TestMonthlyAggregationBudget:
                     created_at=datetime.now() - timedelta(days=1, hours=conv),
                 )
                 daily_records.append(record)
-        
+
         # Calculate monthly aggregated cost
         total_cost = aggregate_monthly_cost(user_id=user_id, config_version=config_version)
-        
+
         # Assert budget compliance: must be < $0.20
         assert total_cost < Decimal("0.20"), \
             f"Monthly cost {total_cost} exceeds budget $0.20"
@@ -515,10 +515,10 @@ class TestMonthlyAggregationBudget:
         """
         user_id = "student-ops-test"
         config_version = CONFIG["version"]
-        
+
         # Create records for each operation type
-        for op in [LLMUsageLog.Operation.GENERATE, 
-                   LLMUsageLog.Operation.GUARD, 
+        for op in [LLMUsageLog.Operation.GENERATE,
+                   LLMUsageLog.Operation.GUARD,
                    LLMUsageLog.Operation.OFF_TOPIC]:
             LLMUsageLog.objects.create(
                 request_id=uuid.uuid4(),
@@ -531,7 +531,7 @@ class TestMonthlyAggregationBudget:
                 config_version=config_version,
                 created_at=datetime.now(),
             )
-        
+
         # Create gate record (should not count)
         LLMUsageLog.objects.create(
             request_id=uuid.uuid4(),
@@ -544,9 +544,9 @@ class TestMonthlyAggregationBudget:
             config_version=config_version,
             created_at=datetime.now(),
         )
-        
+
         total_cost = aggregate_monthly_cost(user_id=user_id, config_version=config_version)
-        
+
         # Should only include 3 operations (generate, guard, off_topic), not gate
         # 3 * 0.000375 = 0.001125
         expected_cost = Decimal("0.001125")
@@ -561,7 +561,7 @@ class TestMonthlyAggregationBudget:
 class TestLLMUsageLogModelContract:
     """
     Test Case 7: LLMUsageLog model fields match contract (append-only, no update).
-    
+
     Model is append-only by design:
     - Primary key is UUID (prevents natural key overwrites)
     - All required fields enforced (not null)

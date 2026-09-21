@@ -1,4 +1,5 @@
 # impl: FR-002-04
+# impl: FR-002-09
 """
 Two-step relevance policy for AI Tutor Service.
 
@@ -20,12 +21,19 @@ If retrieved_segments is non-empty (≥ min_rank_score) → returns None to sign
 "proceed to generation".
 """
 
+import logging
+import uuid
 from dataclasses import dataclass
 from typing import Any, Optional
 
 from django.conf import settings
+from django.db import OperationalError
 
+from ai_tutor_service.providers.models import LLMUsageLog
+from ai_tutor_service.providers.usage import record_usage
 from ai_tutor_service.providers.client import LLMClient, LLMError
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -80,6 +88,8 @@ class RelevancePolicy:
         question: str,
         has_ready_materials: bool,
         retrieved_segments: list[dict[str, Any]],
+        user_id: str | None = None,
+        request_id: uuid.UUID | None = None,
     ) -> Optional[RelevanceDecision]:
         """
         Decide relevance of a question to the current unit materials.
@@ -89,6 +99,11 @@ class RelevancePolicy:
             has_ready_materials: Whether the unit has any READY materials at all.
             retrieved_segments: Segments returned by retriever (already filtered
                                by min_rank_score and top_k).
+            user_id: Optional user identifier. If provided, a usage record will be
+                     created for the off-topic classifier call. If None, no usage
+                     record is created (unit tests call decide without a user_id).
+            request_id: Optional request identifier. If not provided and user_id
+                        is provided, a new UUID will be generated.
 
         Returns:
             RelevanceDecision with status/answer/topic/sources if decision is
@@ -122,6 +137,29 @@ class RelevancePolicy:
             timeout = self.config["generation_timeout_seconds"]
 
             off_topic_result = self._client.off_topic(prompt, model_id, timeout)
+
+            # Record the off_topic classifier usage (FR-002-09 / T-048).
+            # Best-effort: a DB failure must never break the relevance decision
+            # (record_usage already swallows OperationalError, but we guard here
+            # for the case where user_id is not available).
+            if user_id is not None:
+                try:
+                    record_usage(
+                        request_id=request_id if request_id is not None else uuid.uuid4(),
+                        user_id=user_id,
+                        operation=LLMUsageLog.Operation.OFF_TOPIC,
+                        input_tokens=off_topic_result["usage"]["input_tokens"],
+                        output_tokens=off_topic_result["usage"]["output_tokens"],
+                        model_id=off_topic_result["model_id"],
+                        config_version=self.config["version"],
+                    )
+                except OperationalError as exc:
+                    logger.warning(
+                        "record_usage failed for off_topic (user_id=%s): %s",
+                        user_id,
+                        exc,
+                        exc_info=True,
+                    )
 
             classification = off_topic_result["classification"]
             confidence = off_topic_result["confidence"]

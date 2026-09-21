@@ -1,5 +1,6 @@
 # impl: FR-002-13
 # verifies: FR-002-13
+# impl: FR-002-09
 """
 Gate evaluation logic for AI Tutor release gate (T-044).
 
@@ -19,7 +20,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple, TypedDict
 
+from django.db import OperationalError
+
 from ai_tutor_service.config import load_tutor_config
+from ai_tutor_service.providers.models import LLMUsageLog
+from ai_tutor_service.providers.usage import record_usage
 
 _DEFAULT_THRESHOLDS: Optional[Tuple[float, float]] = None
 
@@ -120,6 +125,7 @@ class GateEvaluator:
         Args:
             config: Loaded tutor configuration from tutor_config.yaml
         """
+        self.config = config
         self.go_threshold = config["guard"]["gate_go_threshold"]
         self.stop_threshold = config["guard"]["gate_stop_threshold"]
         self.config_version = config["version"]
@@ -202,10 +208,27 @@ class GateEvaluator:
         else:
             verdict = verdict_for_rate(rate, self.go_threshold, self.stop_threshold)
         
+        # Record gate evaluation usage (FR-002-09 / T-048). The gate is a
+        # read-only evaluation of a corpus; no LLM tokens are consumed here,
+        # so the record is marked incomplete (excluded from learner cost).
+        run_id = str(uuid.uuid4())
+        try:
+            record_usage(
+                request_id=run_id,
+                user_id="gate",
+                operation=LLMUsageLog.Operation.GATE,
+                input_tokens=None,
+                output_tokens=None,
+                model_id=self.config["guard_model_id"],
+                config_version=self.config_version,
+            )
+        except OperationalError as exc:
+            logger.warning("record_usage failed for gate run (%s): %s", run_id, exc, exc_info=True)
+        
         finished_at = datetime.now(timezone.utc).isoformat()
         
         return {
-            "run_id": str(uuid.uuid4()),
+            "run_id": run_id,
             "sample_version": sample_version,
             "config_version": self.config_version,
             "total": total,

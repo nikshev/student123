@@ -4,6 +4,7 @@
 # impl: FR-002-05
 # impl: FR-002-06
 # impl: FR-002-07
+# impl: FR-002-09
 """
 TutoringPipeline — the core AI tutor pipeline.
 
@@ -14,6 +15,7 @@ tutor_config.yaml; nothing is hard-coded.
 
 import hashlib
 import json
+import logging
 import time
 import uuid
 from datetime import timedelta
@@ -21,7 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from django.conf import settings
-from django.db import transaction
+from django.db import OperationalError, transaction
 from django.utils import timezone
 
 from ai_tutor_service.config import load_tutor_config
@@ -31,9 +33,13 @@ from ai_tutor_service.limits.models import IdempotencyRecord
 from ai_tutor_service.guard.solution_guard import SolutionGuard
 from ai_tutor_service.materials.retriever import MaterialRetriever
 from ai_tutor_service.providers.client import LLMClient
+from ai_tutor_service.providers.models import LLMUsageLog
+from ai_tutor_service.providers.usage import record_usage
 from ai_tutor_service.tutoring.grounding import build_sources
 from ai_tutor_service.tutoring.policy import build_tutoring_policy
 from ai_tutor_service.tutoring.relevance import RelevancePolicy
+
+logger = logging.getLogger(__name__)
 
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "tutor_config.yaml"
 
@@ -143,11 +149,47 @@ class TutoringPipeline:
                 tutor_prompt, model_id = build_tutoring_policy(question, segments, self.config)
                 gen_timeout = self.config["generation_timeout_seconds"]
                 gen_result = self.client.generate(tutor_prompt, model_id, gen_timeout)
+                try:
+                    gen_usage = gen_result.get("usage") or {}
+                    record_usage(
+                        request_id=request_id,
+                        user_id=user_id,
+                        operation=LLMUsageLog.Operation.GENERATE,
+                        input_tokens=gen_usage.get("input_tokens"),
+                        output_tokens=gen_usage.get("output_tokens"),
+                        model_id=model_id,
+                        config_version=self.config["version"],
+                    )
+                except OperationalError as exc:
+                    logger.warning(
+                        "record_usage failed for generate (request_id=%s): %s",
+                        request_id,
+                        exc,
+                        exc_info=True,
+                    )
                 candidate_text = gen_result["text"]
 
                 # --- guard ---
                 guard = SolutionGuard(self.config, client=self.client)
                 verdict = guard.check(candidate_text)
+                try:
+                    guard_usage = guard.last_usage or {}
+                    record_usage(
+                        request_id=request_id,
+                        user_id=user_id,
+                        operation=LLMUsageLog.Operation.GUARD,
+                        input_tokens=guard_usage.get("input_tokens"),
+                        output_tokens=guard_usage.get("output_tokens"),
+                        model_id=self.config["guard_model_id"],
+                        config_version=self.config["version"],
+                    )
+                except OperationalError as exc:
+                    logger.warning(
+                        "record_usage failed for guard (request_id=%s): %s",
+                        request_id,
+                        exc,
+                        exc_info=True,
+                    )
 
                 if verdict["contains_solution"]:
                     status = "blocked"

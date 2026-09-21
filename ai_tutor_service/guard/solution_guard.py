@@ -48,6 +48,7 @@ class SolutionGuard:
     def __init__(self, config: dict[str, Any], client: LLMClient | None = None):
         self.config = config
         self._client = client
+        self._last_usage: dict[str, int] | None = None
 
     @property
     def client(self) -> LLMClient:
@@ -82,6 +83,8 @@ class SolutionGuard:
                 error_type=exc.error_type,
                 status_code=exc.status_code,
             ) from exc
+
+        self._last_usage = raw.get("usage")
 
         self._validate_verdict(raw)
 
@@ -120,3 +123,14 @@ class SolutionGuard:
                 message="Guard response missing or invalid reason",
                 error_type="malformed_response",
             )
+
+    @property
+    def last_usage(self) -> dict[str, int] | None:
+        """
+        Return the token usage from the most recent guard check.
+
+        Returns the 'usage' dict with 'input_tokens' and 'output_tokens'
+        from the last successful guard.check() call, or None if no check
+        has been performed yet or the last call raised GuardTechnicalError.
+        """
+        return self._last_usage
