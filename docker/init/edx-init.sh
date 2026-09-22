@@ -35,7 +35,9 @@ echo "== Міграції LMS =="
 ./manage.py lms migrate --noinput
 
 echo "== Міграції CMS =="
-./manage.py cms migrate --noinput
+# УВАГА: DJANGO_SETTINGS_MODULE сервісу — lms.envs.tutor.production,
+# тому для CMS-команд модуль підміняємо явно (інакше мігрує LMS-схема).
+DJANGO_SETTINGS_MODULE=cms.envs.tutor.production ./manage.py cms migrate --noinput
 
 CMS_URL="http://${CMS_HOST:-studio.local.openedx.io}:${CMS_PORT:-8011}"
 echo "== OAuth-клієнт CMS SSO (cms-sso) =="
