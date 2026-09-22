@@ -57,6 +57,8 @@
 | Мобільний застосунок | Форк openedx-app-android/ios, брендування, публікація в сторах | Конфігурація + збірка | Етап 2 |
 | Тема оформлення (темна) | НЕ пишемо свою: Tutor Indigo вже має перемикач світлої/темної теми, увімкнений за замовчуванням (`tutor plugins install indigo`, `tutor plugins enable indigo`, `tutor local do settheme indigo`). Брендинг — `tutor config save --set 'INDIGO_PRIMARY_COLOR="#..."'`; глибша кастомізація — форк і правки `_extras.scss` | Конфігурація (плагін) | MVP |
 | Вхід через соцмережі | НЕ пишемо: в edx-platform це вбудований python-social-auth (Google, Facebook, Microsoft, Apple, LinkedIn, GitHub, Twitter + будь-який OAuth2/OIDC/SAML). Увімкнення маленьким yaml-плагіном (`FEATURES["ENABLE_THIRD_PARTY_AUTH"]`, `THIRD_PARTY_AUTH_BACKENDS`), провайдери заводяться в Django-адмінці (`/admin/third_party_auth/oauth2providerconfig/`, redirect виду `https://lms.домен/auth/complete/google-oauth2/`). Вмикаємо Google + Apple (Apple вимагає Sign in with Apple для iOS-застосунку, якщо є інший соцлогін), GitHub — бонусом; `ENABLE_REQUIRE_THIRD_PARTY_AUTH` НЕ вмикати, звичайна пошта лишається запасним входом | Конфігурація (плагін) | MVP |
+| Українська локалізація | НЕ пишемо і плагін не потрібен: переклади вже в платформі (openedx-translations, тягнуться в образ через atlas pull), вмикається одним рядком `LANGUAGE_CODE: "uk"`. Зараз частково: ядро LMS українською, але нові рядки й окремі MFE місцями падають в англійську (community-переклад, ~75% серверних рядків); наші XBlock і так українською | Конфігурація | MVP |
+| Повний український переклад | Дофарбувати community-переклад до 100%: доперекласти відсутні рядки ядра, MFE й власних XBlock через Transifex/openedx-translations (pull request туди ж — стане на користь усім), закрити fallback на англійську | Перекладацька робота + збірка | Етап 2 |
 | Аналітика | Перегляди по юнітах, кидання відео, результати квізів, топ питань до AI | Tracking logs + Bunny analytics | Етап 2 |
 
 ## Технічна архітектура
@@ -156,7 +158,7 @@ MVP за 12 тижнів у браузері з одним предметом; �
 | 3. AI-репетитор | 5–8 | learning-assistant + RAG на Haiku, промпт репетитора, логи |
 | 4. Батьки й оплата | 7–10 | ParentLink, сторінка прогресу, LiqPay → enrollment |
 | 5. Запуск | 11–12 | Клас дитини + друзі, 5 вчителів, перші шорти в TikTok |
-| Етап 2 | 13–20 | Мобільний застосунок у сторах, інтерактивні квізи у відео, роутинг Haiku → Sonnet, аналітика |
+| Етап 2 | 13–20 | Мобільний застосунок у сторах, інтерактивні квізи у відео, роутинг Haiku → Sonnet, аналітика, повний український переклад |
 | Етап 3 | 21+ | Другий предмет, репетиторство, заявка в USF / Освіторію з живими метриками |
 
 ## Метрики успіху
