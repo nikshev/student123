@@ -8,8 +8,14 @@ requires-python = ">=3.11"
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
+[project.entry-points."xblock.v1"]
+ai_tutor_xblock = "ai_tutor_xblock.block:AiTutorXBlock"
+
 [tool.setuptools.packages.find]
 include = ["ai_tutor_xblock*"]
+
+[tool.setuptools.package-data]
+ai_tutor_xblock = ["static/**/*", "templates/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

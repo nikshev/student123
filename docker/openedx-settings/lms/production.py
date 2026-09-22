@@ -20,8 +20,10 @@ from xmodule.modulestore.modulestore_settings import update_module_store_setting
 
 LMS_HOST = os.environ.get("LMS_HOST", "local.openedx.io")
 CMS_HOST = os.environ.get("CMS_HOST", "studio.local.openedx.io")
-LMS_ROOT_URL = f"http://{LMS_HOST}:8000"
-CMS_ROOT_URL = f"http://{CMS_HOST}:8001"
+LMS_PORT = os.environ.get("LMS_PORT", "8010")
+CMS_PORT = os.environ.get("CMS_PORT", "8011")
+LMS_ROOT_URL = f"http://{LMS_HOST}:{LMS_PORT}"
+CMS_ROOT_URL = f"http://{CMS_HOST}:{CMS_PORT}"
 
 # --- Secrets from environment (never in git) ---
 SECRET_KEY = os.environ["OPENEDX_SECRET_KEY"]
@@ -169,9 +171,9 @@ CORS_ORIGIN_WHITELIST = []
 
 # --- CMS SSO wiring ---
 LOGIN_REDIRECT_WHITELIST = [CMS_HOST]
-IDA_LOGOUT_URI_LIST.append(f"http://{CMS_HOST}:8001/logout/")
+IDA_LOGOUT_URI_LIST.append(f"http://{CMS_HOST}:{CMS_PORT}/logout/")
 SEARCH_SKIP_ENROLLMENT_START_DATE_FILTERING = True
-CORS_ORIGIN_WHITELIST.append(f"http://{CMS_HOST}:8001")
+CORS_ORIGIN_WHITELIST.append(f"http://{CMS_HOST}:{CMS_PORT}")
 
 # --- Cookies without HTTPS (local demo) ---
 SESSION_COOKIE_SECURE = False

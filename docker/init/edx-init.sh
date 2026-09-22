@@ -37,7 +37,7 @@ echo "== Міграції LMS =="
 echo "== Міграції CMS =="
 ./manage.py cms migrate --noinput
 
-CMS_URL="http://studio.local.openedx.io:8001"
+CMS_URL="http://${CMS_HOST:-studio.local.openedx.io}:${CMS_PORT:-8011}"
 echo "== OAuth-клієнт CMS SSO (cms-sso) =="
 ./manage.py lms manage_user cms cms@openedx --unusable-password \
   || true

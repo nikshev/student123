@@ -1,9 +1,10 @@
 # Open edX + наші плагіни в Docker Compose (без Tutor CLI)
 #
 # Що піднімається (`docker compose up -d`):
-#   LMS   http://local.openedx.io:8000   (Open edX Redwood, образ 18.1.3)
-#   CMS   http://studio.local.openedx.io:8001 (Studio)
+#   LMS   http://local.openedx.io:8010   (Open edX Redwood, образ 18.1.3)
+#   CMS   http://studio.local.openedx.io:8011 (Studio)
 #   AI Tutor Service (внутрішній): http://ai-tutor-service:8001 (хост: :8002)
+# Хостові порти LMS/CMS задаються через LMS_PORT/CMS_PORT у .env (дефолт 8010/8011).
 # Плагіни: video_xblock (фіча 001), ai_tutor_xblock + ai_tutor_service (фіча 002)
 # запечені в образ + налаштовані через docker/openedx-settings.
 #
@@ -32,7 +33,7 @@ docker compose up -d                 # БД → edx-init (міграції, OAut
 docker compose logs -f edx-init      # дочекатися "Ініціалізація завершена"
 ```
 
-Відкрити: LMS http://local.openedx.io:8000, Studio http://studio.local.openedx.io:8001
+Відкрити: LMS http://local.openedx.io:8010, Studio http://studio.local.openedx.io:8011
 (`local.openedx.io` резолвиться в 127.0.0.1 без записів у /etc/hosts).
 Логін: ADMIN_USERNAME/ADMIN_PASSWORD з .env.
 
