@@ -45,6 +45,9 @@ JWT_AUTH["JWT_ISSUERS"] = [
 ]
 SOCIAL_AUTH_EDX_OAUTH2_KEY = "cms-sso"
 SOCIAL_AUTH_EDX_OAUTH2_SECRET = os.environ["CMS_OAUTH2_SECRET"]
+# Публічний (для браузера) корінь OAuth LMS: серверні виклики йдуть
+# через внутрішній http://lms:8000, а authorize-redirect — сюди.
+SOCIAL_AUTH_EDX_OAUTH2_PUBLIC_URL_ROOT = f"http://{LMS_HOST}:{LMS_PORT}"
 
 # --- MongoDB (no auth, like Tutor defaults) ---
 mongodb_parameters = {
