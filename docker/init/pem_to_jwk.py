@@ -85,8 +85,11 @@ def main() -> int:
             }
         ]
     }
-    print("PRIVATE_JSON=" + json.dumps(private, separators=(",", ":")))
-    print("PUBLIC_JSON=" + json.dumps(public, separators=(",", ":")))
+    # Single quotes around the JSON: init-secrets.sh eval()s this output,
+    # and bare double quotes would be stripped by the shell. JSON produced
+    # by json.dumps never contains single quotes, so this is safe.
+    print("PRIVATE_JSON='" + json.dumps(private, separators=(",", ":")) + "'")
+    print("PUBLIC_JSON='" + json.dumps(public, separators=(",", ":")) + "'")
     return 0
 
 

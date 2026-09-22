@@ -51,7 +51,8 @@ maybe_set_kv ADMIN_PASSWORD "$(rand_hex 16)"
 maybe_set_kv AI_TUTOR_SHARED_SECRET "$(rand_hex 32)"
 
 echo "== JWT RSA ключ (LMS<->CMS SSO) =="
-if grep "^JWT_PRIVATE_SIGNING_JWK_JSON=" .env | grep -q "change-me"; then
+jwt_current="$(grep "^JWT_PRIVATE_SIGNING_JWK_JSON=" .env 2>/dev/null | cut -d= -f2- || true)"
+if [ -z "$jwt_current" ] || printf '%s' "$jwt_current" | grep -q "change-me"; then
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT
   ssh-keygen -t rsa -b 2048 -m PEM -f "$tmpdir/jwt_rsa" -N "" -q
