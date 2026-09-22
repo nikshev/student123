@@ -55,6 +55,8 @@
 | Батьківський кабінет | Зв'язок акаунтів батько↔учень, прогрес, час у курсі, оцінки, email-звіт щотижня | Власний Django-плагін + API | MVP (мінімальний) |
 | Оплата | Підписка на предмет; LiqPay/Monobank; доступ до курсу за фактом оплати | Django-плагін, enrollment API | MVP |
 | Мобільний застосунок | Форк openedx-app-android/ios, брендування, публікація в сторах | Конфігурація + збірка | Етап 2 |
+| Тема оформлення (темна) | НЕ пишемо свою: Tutor Indigo вже має перемикач світлої/темної теми, увімкнений за замовчуванням (`tutor plugins install indigo`, `tutor plugins enable indigo`, `tutor local do settheme indigo`). Брендинг — `tutor config save --set 'INDIGO_PRIMARY_COLOR="#..."'`; глибша кастомізація — форк і правки `_extras.scss` | Конфігурація (плагін) | MVP |
+| Вхід через соцмережі | НЕ пишемо: в edx-platform це вбудований python-social-auth (Google, Facebook, Microsoft, Apple, LinkedIn, GitHub, Twitter + будь-який OAuth2/OIDC/SAML). Увімкнення маленьким yaml-плагіном (`FEATURES["ENABLE_THIRD_PARTY_AUTH"]`, `THIRD_PARTY_AUTH_BACKENDS`), провайдери заводяться в Django-адмінці (`/admin/third_party_auth/oauth2providerconfig/`, redirect виду `https://lms.домен/auth/complete/google-oauth2/`). Вмикаємо Google + Apple (Apple вимагає Sign in with Apple для iOS-застосунку, якщо є інший соцлогін), GitHub — бонусом; `ENABLE_REQUIRE_THIRD_PARTY_AUTH` НЕ вмикати, звичайна пошта лишається запасним входом | Конфігурація (плагін) | MVP |
 | Аналітика | Перегляди по юнітах, кидання відео, результати квізів, топ питань до AI | Tracking logs + Bunny analytics | Етап 2 |
 
 ## Технічна архітектура
@@ -84,6 +86,8 @@ flowchart LR
 - **Батьківський плагін** — Django app у edx-platform: модель `ParentLink`, сторінка прогресу через Grades API і completion, щотижневий email через Celery.
 - **Оплата** — Django app: вебхук LiqPay → enrollment у курс, окремий course mode «paid».
 - **Мобільний** — форк openedx-app-android / openedx-app-ios, OAuth-клієнти на сервері, mobile API увімкнено; Bunny плеєр працює у WebView.
+- **Тема Indigo** — темна тема як Tutor-плагін, а не власна розробка: перемикач світла/темна з коробки, увімкнений за замовчуванням. Чесна оговорка: це плагін поверх платформи, а не системна можливість — окремі MFE (Authn, ORA, Studio) можуть підхоплювати її частково. Для студентського LMS достатньо; у Studio викладачі переживуть світлу.
+- **Соцлогін** — нічого не пишемо: готові бекенди python-social-auth, заводяться yaml-плагіном і записами провайдерів у Django-адмінці; кнопки з'являються на сторінці логіну самі. Google є у всіх (шкільні акаунти), GitHub — не у всіх, тому база — Google + Apple.
 
 Вартість інфраструктури на старті: VPS \~$40/міс, Bunny \~$5/міс, LLM $20–60/міс при 300 учнях, Apple Developer $99/рік, Google Play $25.
 
@@ -146,7 +150,7 @@ MVP за 12 тижнів у браузері з одним предметом; �
 
 | Етап | Тижні | Що готово |
 | --- | --- | --- |
-| 0. Інфраструктура | 1–2 | Tutor на VPS, Bunny акаунт, домен, 1 тестовий курс |
+| 0. Інфраструктура | 1–2 | Tutor на VPS, Bunny акаунт, домен, 1 тестовий курс; тема Indigo + соцлогін Google/Apple |
 | 1. Відео | 3–4 | Bunny Video XBlock: upload зі Studio, плеєр з токеном, події перегляду |
 | 2. Контент | 3–8 | 10 юнітів одного предмета за пайплайном OBS → Descript → CapCut; квізи; транскрипти |
 | 3. AI-репетитор | 5–8 | learning-assistant + RAG на Haiku, промпт репетитора, логи |
