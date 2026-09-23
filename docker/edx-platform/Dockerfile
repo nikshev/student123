@@ -22,11 +22,19 @@ COPY --chown=app:app ./video_xblock /opt/xblocks/video_xblock
 COPY --chown=app:app ./ai_tutor_xblock /opt/xblocks/ai_tutor_xblock
 RUN pip install --no-cache-dir /opt/xblocks/video_xblock /opt/xblocks/ai_tutor_xblock
 
+# Українська локаль: в опублікованому образі 18.1.3 є лише djangojs-каталог,
+# серверного django.mo нема. Тягну свіжі .po з openedx-translations
+# (піни комітів — відтворюваність) і компілюю.
+# django.po ~75%, djangojs.po ~81% (community-переклад, решта — fallback на en).
+ADD --chown=app:app https://raw.githubusercontent.com/openedx/openedx-translations/a78017dbbe40eac09d2b044b5684106824a062d0/translations/edx-platform/conf/locale/uk/LC_MESSAGES/django.po /openedx/edx-platform/conf/locale/uk/LC_MESSAGES/django.po
+ADD --chown=app:app https://raw.githubusercontent.com/openedx/openedx-translations/17afa9f9dccf152b42d91a8f342ae07586fbb799/translations/edx-platform/conf/locale/uk/LC_MESSAGES/djangojs.po /openedx/edx-platform/conf/locale/uk/LC_MESSAGES/djangojs.po
+
 # Build-time копія налаштувань і конфігу суто для collectstatic.
 # Рантайм монтує справжні файли поверх (див. volumes у docker-compose.yml).
 COPY ./docker/openedx-settings/lms /openedx/edx-platform/lms/envs/tutor
 COPY ./docker/openedx-settings/cms /openedx/edx-platform/cms/envs/tutor
 COPY ./docker/openedx-config /openedx/config-build
+COPY --chown=app:app ./docker/openedx-locale /openedx/locale-overrides
 ENV LMS_CFG=/openedx/config-build/lms.env.yml \
     CMS_CFG=/openedx/config-build/cms.env.yml \
     REVISION_CFG=/openedx/config-build/revisions.yml \
@@ -39,7 +47,11 @@ ENV LMS_CFG=/openedx/config-build/lms.env.yml \
     MYSQL_PASSWORD=buildtime-dummy \
     AI_TUTOR_SHARED_SECRET=buildtime-dummy
 
-RUN ./manage.py lms collectstatic --noinput --settings=tutor.production \
+RUN rm -f /openedx/edx-platform/conf/locale/uk/LC_MESSAGES/django.mo \
+          /openedx/edx-platform/conf/locale/uk/LC_MESSAGES/djangojs.mo \
+    && ./manage.py lms compilemessages -l uk --settings=tutor.production \
+    && ./manage.py cms compilemessages -l uk --settings=tutor.production \
+    && ./manage.py lms collectstatic --noinput --settings=tutor.production \
     && ./manage.py cms collectstatic --noinput --settings=tutor.production
 
 # Default CMD береться з базового образу: ["uwsgi", "/openedx/uwsgi.ini"]

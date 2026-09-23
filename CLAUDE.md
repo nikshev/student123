@@ -18,6 +18,8 @@ Claude Code, Codex і opencode працюють з одним репозитор
 
 `CLAUDE.md` описує цей процес для Claude Code, `AGENTS.md` — для Codex і
 opencode. Якщо правило процесу змінюється, синхронно онови обидва файли.
+Моделі та автоматичний failover opencode описані в `AGENTS.md` і
+`.opencode/agents/*.md`; вони не змінюють налаштування моделей Claude Code.
 
 ## Процес
 
@@ -35,7 +37,7 @@ SDD через spec-kit. Порядок на фічу:
 
 | Коли | Агент |
 |---|---|
-| план, data-model, contracts, декомпозиція на задачі | `architect` (fable) |
+| план, data-model, contracts, декомпозиція на задачі | `architect` (opus) |
 | звичайна задача `T-xxx` | `implementer` (sonnet) |
 | задача з міткою `critical:`, або після ескалації | `implementer-senior` (opus) |
 | ревʼю після кожної задачі і перед мержем фічі | `reviewer` (opus) |

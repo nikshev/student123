@@ -69,7 +69,88 @@ PYEOF
 echo "== Waffle: completion tracking =="
 (./manage.py lms waffle_switch --list \
   | grep completion.enable_completion_tracking) \
-  || ./manage.py lms waffle_switch --create completion.enable_completion_tracking on \
+  || ./manage.py lms waffle_switch --create completion.enable_completion_tracking on
  
+echo "== Django Site (SITE_ID=2) =="
+./manage.py lms shell <<PYEOF
+from django.contrib.sites.models import Site
+site, created = Site.objects.update_or_create(
+    id=2,
+    defaults={
+        "domain": "local.openedx.io:8010",
+        "name": "Open edX student123",
+    },
+)
+action = "created" if created else "updated"
+print(f"Site {site.id} ({site.domain}) {action}")
+PYEOF
+ 
+echo "== Django Site for Preview (SITE_ID=3) =="
+./manage.py lms shell <<PYEOF
+from django.contrib.sites.models import Site
+site, created = Site.objects.update_or_create(
+    id=3,
+    defaults={
+        "domain": "preview.local.openedx.io:8010",
+        "name": "Open edX student123 Preview",
+    },
+)
+action = "created" if created else "updated"
+print(f"Site {site.id} ({site.domain}) {action}")
+PYEOF
+
+echo "== Українські переклади LMS/Studio скомпільовані під час збірки образу =="
+
+echo "== OAuth2-провайдери (тільки ті, в кого є key+secret в env) =="
+./manage.py lms shell <<'PYEOF'
+import json
+import os
+
+from django.contrib.auth import get_user_model
+from django.contrib.sites.models import Site
+
+from common.djangoapps.third_party_auth.models import OAuth2ProviderConfig
+
+WANTED = {
+    # slug: (backend_name, name, icon_class, key_env, secret_env, scope)
+    "google": ("google-oauth2", "Google", "fa-google",
+               "SOCIAL_AUTH_GOOGLE_OAUTH2_KEY", "SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET",
+               "email profile"),
+    "facebook": ("facebook", "Facebook", "fa-facebook",
+                 "SOCIAL_AUTH_FACEBOOK_KEY", "SOCIAL_AUTH_FACEBOOK_SECRET",
+                 "email public_profile"),
+    "linkedin": ("linkedin", "LinkedIn", "fa-linkedin",
+                 "SOCIAL_AUTH_LINKEDIN_OAUTH2_KEY", "SOCIAL_AUTH_LINKEDIN_OAUTH2_SECRET",
+                 "r_liteprofile r_emailaddress"),
+    "github": ("github", "GitHub", "fa-github",
+               "SOCIAL_AUTH_GITHUB_KEY", "SOCIAL_AUTH_GITHUB_SECRET",
+               "user:email read:user"),
+}
+
+site = Site.objects.get(id=2)
+changed_by = get_user_model().objects.filter(username=os.environ.get("ADMIN_USERNAME", "admin")).first()
+for slug, (backend_name, name, icon_class, key_env, secret_env, scope) in WANTED.items():
+    key = os.environ.get(key_env, "")
+    secret = os.environ.get(secret_env, "")
+    if not key or not secret:
+        print(f"{name}: skipped (no {key_env}/{secret_env} in env, DB untouched)")
+        continue
+    obj, created = OAuth2ProviderConfig.objects.update_or_create(
+        slug=slug,
+        defaults={
+            "name": name,
+            "backend_name": backend_name,
+            "enabled": True,
+            "visible": True,
+            "site": site,
+            "icon_class": icon_class,
+            "key": key,
+            "secret": secret,
+            "other_settings": json.dumps({"scope": scope}),
+            "changed_by": changed_by,
+        },
+    )
+    print(f"{name}: {'created' if created else 'updated'}")
+PYEOF
 
 echo "Ініціалізація завершена."

@@ -678,6 +678,51 @@ class TestLLMUsageLogModel:
         field = LLMUsageLog._meta.get_field("created_at")
         assert field.auto_now_add is True
 
+    # ── T-055 [FR-002-14]: unknown ≠ zero ─────────────────────────────────────
+
+    def test_llm_usage_log_usage_fields_nullable(self):
+        """T-055 / FR-002-14: the three usage fields are NULLable (NULL = unknown)."""
+        LLMUsageLog = _get_provider_models()
+        for field_name in ("input_tokens", "output_tokens", "estimated_cost_usd"):
+            field = LLMUsageLog._meta.get_field(field_name)
+            assert field.null is True, \
+                f"{field_name} must have null=True so unknown usage stores NULL, not 0"
+            assert field.blank is True, \
+                f"{field_name} must have blank=True"
+
+    def test_usage_unknown_backfill_cutoff_constant(self):
+        """T-055 / FR-002-14: named cutoff constant exists in providers.models."""
+        from datetime import date
+        from ai_tutor_service.providers import models as provider_models
+        assert hasattr(provider_models, "USAGE_UNKNOWN_BACKFILL_CUTOFF"), \
+            "USAGE_UNKNOWN_BACKFILL_CUTOFF must be a named constant in " \
+            "ai_tutor_service/providers/models.py"
+        assert provider_models.USAGE_UNKNOWN_BACKFILL_CUTOFF == date(2026, 6, 1)
+
+    def test_llm_usage_log_full_clean_all_null_usage(self):
+        """T-055 / FR-002-14: full_clean() accepts an all-NULL usage record."""
+        import uuid
+        LLMUsageLog = _get_provider_models()
+        record = LLMUsageLog(
+            request_id=uuid.uuid4(),
+            user_id="student-unknown-usage",
+            model_id="test-model",
+            operation=LLMUsageLog.Operation.GENERATE,
+            input_tokens=None,
+            output_tokens=None,
+            estimated_cost_usd=None,
+            config_version="1.0.0",
+        )
+        # NULL usage (unknown) is a valid record — must not raise.
+        record.full_clean()
+
+    def test_llm_usage_log_config_version_stays_not_null(self):
+        """T-055 / FR-002-14: regression — config_version remains NOT NULL."""
+        LLMUsageLog = _get_provider_models()
+        field = LLMUsageLog._meta.get_field("config_version")
+        assert field.null is False
+        assert field.blank is False
+
 
 # ─── FTS5 Availability ─────────────────────────────────────────────────────────
 

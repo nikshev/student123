@@ -57,36 +57,49 @@ reviewer запускай після завершення implementer.
 
 | Коли | Агент | Модель |
 |---|---|---|
-| план, data-model, contracts, декомпозиція на задачі | `architect` | openrouter/openai/gpt-5.6-sol |
-| рутинна задача `T-xxx`: boilerplate, тести, дрібні правки | `implementer` | openrouter/free |
-| складні фічі, багатофайлові зміни, рефакторинги; задача з міткою `critical:` або після ескалації | `implementer-senior` | openrouter/free |
-| ревʼю після кожної задачі і перед мержем фічі | `reviewer` | deepseek/deepseek-v4-pro, read-only |
+| план, data-model, contracts, декомпозиція на задачі | `architect` | `codex/gpt-5.6-sol`; фолбек — `opencode/gpt-5.5`, `opencode/zen-claude-opus-5-5`, `claude/opus`, `claude/sonnet` |
+| рутинна задача `T-xxx`: boilerplate, тести, дрібні правки | `implementer` | `opencode/mimo-v2.6-flash-free` |
+| складні фічі, багатофайлові зміни, рефакторинги; задача з міткою `critical:` або після ескалації | `implementer-senior` | `opencode/nemotron-3-ultra-free` |
+| ревʼю після кожної задачі і перед мержем фічі | `reviewer` | `codex/gpt-5.5`, read-only; фолбек — `opencode/zen-claude-sonnet-5`, `opencode/zen-claude-opus-5-5`, `claude/sonnet`, `claude/opus` |
 
-### Fallback-ланцюги opencode
+### Автоматичний failover моделей opencode
 
-`implementer` і `implementer-senior` працюють на `openrouter/free` — Free
-Models Router OpenRouter: запит автоматично йде на будь-яку доступну вільну
-модель (фільтрується за потрібними можливостями). Конкретні моделі внизу —
-ручний fallback, коли free-роутер недоступний. Файли агентів носять тільки
-основну модель; ланцюг тримається тут.
+Плагін `@razroo/opencode-model-fallback` зареєстрований у `opencode.json` та
+встановлюється з кореневого `package.json` / `package-lock.json`. Для агентів
+`model` у `.opencode/agents/*.md` — основна модель, а впорядкований
+`fallback_models` — автоматичний ланцюг плагіна. Плагін читає ланцюг із
+конфігурації агента або з його frontmatter `options`; він переходить до
+наступної моделі при підтримуваній помилці провайдера (зокрема rate limit,
+quota, недоступна модель і HTTP 429/5xx). Після вичерпання ланцюга помилка
+повертається виклику; не перемикайся на незадекларовані чи платні моделі без
+явного дозволу.
 
-`implementer-senior` (ручний fallback після `openrouter/free`):
+Поточний ланцюг `implementer` (з `.opencode/agents/implementer.md`):
 
-1. `openrouter/nvidia/nemotron-3-ultra-550b-a55b:free` — 1M контекст, multi-step reasoning, оркестрація;
-2. `openrouter/thinkingmachines/inkling:free` — 1M контекст, reasoning + мультимодальність;
-3. `openrouter/poolside/laguna-s-2.1:free` — найсильніший чисто кодовий агент free-тіру;
-4. `openrouter/deepseek/deepseek-v4-flash-0731:free` — кодинг/агенти, 1M контекст, Rust;
-5. далі — зупинка розробки (на платні моделі не переходимо без явного дозволу).
+1. `opencode/mimo-v2.6-flash-free` — основна;
+2. `openrouter/nvidia/nemotron-3.5-lightning:free`;
+3. `opencode/nemotron-3.5-lightning-free`;
+4. `inclusionai/ling-3.0-flash-fin:free`;
+5. `opencode/ling-3.0-flash-fin-free`;
+6. після вичерпання — зупинити задачу й повідомити про помилку.
 
-`implementer` (ручний fallback після `openrouter/free`):
+Поточний ланцюг `implementer-senior` (з `.opencode/agents/implementer-senior.md`):
 
-1. `openrouter/nvidia/nemotron-3.5-lightning:free` — 3B active, high-throughput;
-2. альтернативи: `openrouter/cohere/north-mini-code:free` (64K output) або
-   `openrouter/poolside/laguna-xs-2.1:free`;
-3. далі — зупинка розробки (на платні моделі не переходимо без явного дозволу).
+1. `opencode/nemotron-3-ultra-free` — основна;
+2. `openrouter/nvidia/nemotron-3-ultra-550b-a55b:free`;
+3. `opencode/muse-spark-1.3-contributor-free`;
+4. `opencode/muse-spark-1.2-contributor-free`;
+5. `openrouter/qwen/qwen3.8-27b:free`;
+6. `opencode/big-pickle`;
+7. після вичерпання — зупинити задачу й повідомити про помилку.
 
-Перемикання моделей — тільки в межах однієї задачі: після завершення задачі
-файл агента повертається на `openrouter/free`.
+`architect` і `reviewer` мають `model:` і `fallback_models:` у своїх конфігах (`.opencode/agents/architect.md`, `.opencode/agents/reviewer.md`). Основна модель — Codex (`codex/gpt-5.6-sol` для architect, `codex/gpt-5.5` для reviewer). Фолбек-ланцюг плагіна для architect: `opencode/gpt-5.5`, `opencode/zen-claude-opus-5-5`, `claude/opus`, `claude/sonnet`. Для reviewer: `opencode/zen-claude-sonnet-5`, `opencode/zen-claude-opus-5-5`, `claude/sonnet`, `claude/opus`. Ці проксі не використовують глобальний `fallback_models` з `opencode.json`.
+
+Контекстом для агента завжди є цей репозиторій `open-edx` і фактичний FR-ID з
+поточного `tasks.md`/`spec.md`.
+
+Після змін `opencode.json`, `.opencode/agents/` або плагіна перезапусти opencode,
+щоб він завантажив оновлені налаштування.
 
 ### Ескалація — автоматична
 

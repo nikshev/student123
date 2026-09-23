@@ -2,7 +2,7 @@
 
 <!-- ГЕНЕРУЄТЬСЯ scripts/trace.py — не редагувати вручну -->
 
-Вимог: **30** · задач: **93** (виконано 90) · вимог у роботі: **3** · порушень: **0**
+Вимог: **30** · задач: **102** (виконано 100) · вимог у роботі: **2** · порушень: **0**
 
 ## 001-bunny-video
 
@@ -37,12 +37,12 @@
 | `FR-002-06` | Відповідь із готовим розв'язанням навчального завдання MUST блокуватися автоматично до показу учневі. | `T-037`, `T-038` | `ai_tutor_service/tutoring/pipeline.py`, `ai_tutor_service/guard/solution_guard.py` | `ai_tutor_service/tests/contract/test_solution_guard.py` |
 | `FR-002-07` | Кожен факт блокування MUST бути записаний у лог: учень, курс, юніт, питання, час. | `T-039`, `T-040` | `ai_tutor_service/tutoring/pipeline.py`, `ai_tutor_service/guard/audit.py` | `ai_tutor_service/tests/integration/test_block_record.py` |
 | `FR-002-08` | Після блокування учень MUST бачити зрозуміле пояснення правила («допомагаю розібратися, а не розв'язую за тебе | `T-041`, `T-042` | `ai_tutor_xblock/ai_tutor_xblock/block.py` | `ai_tutor_xblock/tests/contract/test_blocked_response.py` |
-| `FR-002-09` | Кожен запит до репетитора MUST фіксуватися в подіях як первинний запис: учень, курс, юніт, час, тема питання — | `T-045`, `T-046`, `T-047`, `T-048` | `ai_tutor_xblock/ai_tutor_xblock/tracking.py`, `ai_tutor_xblock/ai_tutor_xblock/block.py`, `ai_tutor_service/tutoring/relevance.py`, `ai_tutor_service/tutoring/pipeline.py`, `ai_tutor_service/guard/gate.py`, `ai_tutor_service/providers/usage.py` | `ai_tutor_xblock/tests/integration/test_tracking_flows.py`, `ai_tutor_xblock/tests/unit/test_tracking_publisher.py`, `ai_tutor_service/tests/unit/test_usage_log.py` |
+| `FR-002-09` | Кожен запит до репетитора MUST фіксуватися в подіях як первинний запис: учень, курс, юніт, час, тема питання — | `T-045`, `T-046`, `T-047`, `T-048`, `T-060` | `ai_tutor_xblock/ai_tutor_xblock/tracking.py`, `ai_tutor_xblock/ai_tutor_xblock/block.py`, `ai_tutor_service/tutoring/relevance.py`, `ai_tutor_service/tutoring/pipeline.py`, `ai_tutor_service/guard/gate.py`, `ai_tutor_service/providers/usage.py` | `ai_tutor_xblock/tests/integration/test_tracking_flows.py`, `ai_tutor_xblock/tests/unit/test_tracking_publisher.py`, `ai_tutor_service/tests/unit/test_usage_log.py` |
 | `FR-002-10` | Відповідь MUST надходити протягом 30 секунд у звичайних умовах; якщо сервіс тимчасово недоступний, учень MUST  | `T-003`, `T-004`, `T-011`, `T-012`, `T-013`, `T-014`, `T-025`, `T-026` | `tutor-plugin/plugin.yml`, `ai_tutor_xblock/ai_tutor_xblock/client.py`, `ai_tutor_xblock/ai_tutor_xblock/block.py`, `ai_tutor_xblock/ai_tutor_xblock/__init__.py`, `ai_tutor_service/providers/client.py`, `ai_tutor_service/providers/__init__.py` | `ai_tutor_xblock/tests/contract/test_tutor_service_client.py`, `ai_tutor_xblock/tests/contract/test_handlers.py`, `tests/architecture/test_ai_tutor_tutor_plugin.py`, `ai_tutor_service/tests/contract/test_llm_client.py` |
 | `FR-002-11` | Кількість запитів на учня MUST бути обмежена добовим лімітом; при досягненні ліміту учень MUST бачити поясненн | `T-007`, `T-008`, `T-021`, `T-022` | `ai_tutor_service/tutor_config.yaml`, `ai_tutor_service/config.py`, `ai_tutor_service/limits/service.py` | `ai_tutor_service/tests/unit/test_daily_quota.py`, `ai_tutor_service/tests/unit/test_tutor_config.py` |
 | `FR-002-12` | Учень MUST бачити історію свого діалогу з репетитором у межах юніту. | `T-049`, `T-050` | `ai_tutor_service/conversations/repository.py`, `ai_tutor_service/api/conversation.py` | `ai_tutor_service/tests/contract/test_conversation_api.py` |
 | `FR-002-13` | Перед допуском репетитора до живих учнів MUST прогонятися контрольна вибірка завдань: частка відповідей із гот | `T-043`, `T-044`, `T-053`, `T-054` | `tests/architecture/test_gate_release_lock.py`, `ai_tutor_service/api/gate.py`, `ai_tutor_service/guard/gate.py` | `tests/architecture/test_gate_release_lock.py`, `ai_tutor_service/api/gate.py`, `ai_tutor_service/guard/gate.py`, `ai_tutor_service/tests/contract/test_gate_api.py`, `ai_tutor_service/tests/unit/test_gate_evaluator.py` |
-| `FR-002-14` | Історія діалогів MUST зберігати мінімум даних, потрібних для метрик і гейт-перевірок; доступ до неї MUST мати  | `T-009`, `T-010`, `T-051`, `T-052` | `ai_tutor_service/conversations/access.py`, `ai_tutor_service/conversations/retention.py`, `ai_tutor_service/conversations/models.py`, `ai_tutor_service/limits/models.py`, `ai_tutor_service/guard/models.py`, `ai_tutor_service/providers/models.py`, `ai_tutor_service/materials/models.py`, `ai_tutor_service/conversations/management/commands/purge_expired_tutor_data.py` | `ai_tutor_service/tests/unit/test_data_models.py`, `ai_tutor_service/tests/unit/test_retention.py` |
+| `FR-002-14` | Історія діалогів MUST зберігати мінімум даних, потрібних для метрик і гейт-перевірок; доступ до неї MUST мати  | `T-009`, `T-010`, `T-051`, `T-052`, `T-055`, `T-056`, `T-057`, `T-058`, `T-059`, `T-060`, `T-061`, `T-062`, `T-063` | `ai_tutor_service/conversations/access.py`, `ai_tutor_service/conversations/retention.py`, `ai_tutor_service/conversations/models.py`, `ai_tutor_service/limits/models.py`, `ai_tutor_service/guard/models.py`, `ai_tutor_service/providers/models.py`, `ai_tutor_service/providers/usage.py`, `ai_tutor_service/materials/models.py`, `ai_tutor_service/conversations/management/commands/purge_expired_tutor_data.py`, `ai_tutor_service/providers/migrations/0003_backfill_unknown_usage.py` | `ai_tutor_service/tests/unit/test_usage_backfill_migration.py`, `ai_tutor_service/tests/unit/test_data_models.py`, `ai_tutor_service/tests/unit/test_usage_log.py`, `ai_tutor_service/tests/unit/test_retention.py` |
 
 ## Критичні задачі
 
@@ -66,3 +66,6 @@
 - `T-046` (002-ai-tutor) — виконано
 - `T-048` (002-ai-tutor) — виконано
 - `T-050` (002-ai-tutor) — виконано
+- `T-058` (002-ai-tutor) — виконано
+- `T-060` (002-ai-tutor) — виконано
+- `T-062` (002-ai-tutor) — виконано

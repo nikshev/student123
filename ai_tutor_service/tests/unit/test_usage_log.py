@@ -1,4 +1,4 @@
-# verifies: FR-002-09
+# verifies: FR-002-09, FR-002-14
 """
 Usage log and cost tracking tests for AI Tutor Service (T-047).
 
@@ -15,9 +15,13 @@ Contract for T-048 implementation in ai_tutor_service/providers/usage.py:
    output_per_million_tokens). Gate operations are recorded separately and NOT included in
    learner cost aggregation.
 
-3. Missing usage handling: When an operation completes WITHOUT usage data (usage=None),
-   the record is marked as incomplete. Such records are NOT written with estimated_cost=0.0;
-   instead estimated_cost=None. Aggregation functions skip incomplete records.
+3. Missing usage handling (FR-002-14, NULL semantics): When an operation completes
+   WITHOUT usage data (both token counts None), the record is written with all three
+   columns NULL — never coerced to 0. Aggregation skips records with
+   estimated_cost_usd IS NULL (filtered by the cost column, NOT by zero token
+   counts); genuine zero (0, 0, 0.000000) is a known fact and IS included
+   (contributes exactly 0.00 to the sum). Skipped unknown records are counted
+   separately by count_unknown_usage() so SC-006 has a visible denominator.
 
 4. Config version isolation: Records with different config_version values are grouped
    and filtered separately during aggregation. Same config_version is required for price matching.
@@ -38,6 +42,7 @@ All tests run without external network calls; fixtures provide realistic token c
 # This is the expected behavior: ModuleNotFoundError when importing from usage.py
 from ai_tutor_service.providers.usage import record_usage, aggregate_monthly_cost  # noqa: F401
 
+import inspect
 import uuid
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -250,7 +255,8 @@ class TestEstimatedCostCalculation:
 
     def test_zero_tokens_yields_zero_cost(self):
         """
-        Zero input and output tokens yield zero cost.
+        Genuine zero (0, 0) yields zero cost and is a KNOWN fact: none of the
+        three usage columns may be NULL (FR-002-14 — unknown ≠ zero).
         """
         request_id = uuid.uuid4()
         user_id = "student-zero-cost"
@@ -268,7 +274,13 @@ class TestEstimatedCostCalculation:
         )
 
         record = LLMUsageLog.objects.get(request_id=request_id)
-        assert record.estimated_cost_usd == Decimal("0.0")
+        assert record.input_tokens is not None, \
+            "genuine zero input_tokens must NOT be NULL (it is a known 0)"
+        assert record.output_tokens is not None, \
+            "genuine zero output_tokens must NOT be NULL (it is a known 0)"
+        assert record.estimated_cost_usd is not None, \
+            "genuine zero estimated_cost_usd must NOT be NULL (it is a known 0)"
+        assert record.estimated_cost_usd == Decimal("0")
 
 
 # =============================================================================
@@ -324,6 +336,61 @@ class TestGateSeparateFromLearnerCost:
         expected_gen_cost = Decimal("0.000375")
         assert monthly_cost == expected_gen_cost
 
+    def test_gate_excluded_regardless_of_null_estimated_cost(self):
+        """
+        operation=gate is excluded from learner cost regardless of NULL (FR-002-14):
+
+        - gate with fully unknown usage (estimated_cost_usd IS NULL) — outside
+          learner cost, and its NULL never reaches the summation loop;
+        - gate with a known cost — outside learner cost;
+        - only learner (generate/guard/off_topic) records form the sum.
+        """
+        user_id = "student-gate-null-test"
+        config_version = CONFIG["version"]
+
+        # Learner record with known cost — must form the whole sum:
+        # (100 * 0.25/1e6) + (80 * 1.25/1e6) = 0.000025 + 0.0001 = 0.000125
+        # (exact at the field's 6 decimal places — no quantization drift)
+        record_usage(
+            request_id=uuid.uuid4(),
+            user_id=user_id,
+            operation=LLMUsageLog.Operation.GENERATE,
+            input_tokens=100,
+            output_tokens=80,
+            model_id=CONFIG["model_id"],
+            config_version=config_version,
+        )
+
+        # Gate with fully unknown usage → (NULL, NULL, NULL), must stay out
+        # of learner cost even though its estimated_cost_usd IS NULL.
+        record_usage(
+            request_id=uuid.uuid4(),
+            user_id=user_id,
+            operation=LLMUsageLog.Operation.GATE,
+            input_tokens=None,
+            output_tokens=None,
+            model_id=CONFIG["guard_model_id"],
+            config_version=config_version,
+        )
+
+        # Gate with known cost → must also stay out of learner cost.
+        record_usage(
+            request_id=uuid.uuid4(),
+            user_id=user_id,
+            operation=LLMUsageLog.Operation.GATE,
+            input_tokens=10000,
+            output_tokens=5000,
+            model_id=CONFIG["guard_model_id"],
+            config_version=config_version,
+        )
+
+        monthly_cost = aggregate_monthly_cost(user_id=user_id, config_version=config_version)
+
+        expected_learner_cost = Decimal("0.000125")
+        assert monthly_cost == expected_learner_cost, (
+            "both gate records (NULL and known cost) must be outside learner cost"
+        )
+
 
 # =============================================================================
 # Test Case 4: Missing usage is not treated as zero
@@ -332,16 +399,27 @@ class TestGateSeparateFromLearnerCost:
 @pytest.mark.django_db
 class TestMissingUsageHandling:
     """
-    Test Case 4: Missing usage ≠ zero.
+    Test Case 4: Missing usage ≠ zero (FR-002-14 NULL semantics for record_usage).
 
-    When usage is None (operation completed without usage data),
-    the record is marked as incomplete. Such records are NOT written with estimated_cost=0.0;
-    instead estimated_cost=None. Aggregation functions skip incomplete records.
+    - Fully unknown usage (both token counts None): all three columns
+      (input_tokens, output_tokens, estimated_cost_usd) are written as NULL —
+      strictly `is None`, never 0 / Decimal("0"). "all or nothing".
+    - Partial usage (exactly one token count None): the known counter is kept
+      as-is, the unknown counter is NULL, and estimated_cost_usd is computed
+      from the known part (unknown part counts as 0 in the formula) and stays
+      NOT NULL. State "both counters known, cost NULL" is forbidden.
+    - Genuine zero (0, 0) is a known fact: all three columns are NOT NULL —
+      see TestEstimatedCostCalculation::test_zero_tokens_yields_zero_cost.
+
+    Aggregation filters by estimated_cost_usd IS NOT NULL — by the cost
+    column, never by zero token counts (see the aggregation tests below):
+    fully-unknown records are skipped, genuine zero is included.
     """
 
     def test_missing_usage_creates_incomplete_record(self):
         """
-        Operation without usage data creates record with estimated_cost=None.
+        Operation without usage data (both counts None) creates a record with
+        ALL THREE columns strictly NULL — unknown is not zero (FR-002-14).
         """
         request_id = uuid.uuid4()
         user_id = "student-missing-test"
@@ -359,35 +437,113 @@ class TestMissingUsageHandling:
         )
 
         record = LLMUsageLog.objects.get(request_id=request_id)
-        assert record.input_tokens == 0  # Model default for missing
-        assert record.output_tokens == 0  # Model default for missing
-        # estimated_cost should be None (incomplete), not 0.0
-        assert record.estimated_cost_usd is None or record.estimated_cost_usd == Decimal("0")
+        assert record.input_tokens is None, \
+            "fully unknown input_tokens must be NULL, not 0"
+        assert record.output_tokens is None, \
+            "fully unknown output_tokens must be NULL, not 0"
+        assert record.estimated_cost_usd is None, \
+            "fully unknown estimated_cost_usd must be NULL, not Decimal('0')"
 
-    def test_aggregation_skips_incomplete_records(self):
+    def test_partial_usage_known_input_kept_output_null_cost_from_known_part(self):
         """
-        Monthly aggregation skips records with missing/incomplete usage.
-        Such records do not contribute to cost totals.
+        Partial usage with known input_tokens only: the known counter is stored
+        as-is, the unknown output_tokens is NULL, and estimated_cost_usd is
+        computed from the known part and stays NOT NULL (FR-002-14).
         """
-        user_id = "student-agg-test"
+        request_id = uuid.uuid4()
+        user_id = "student-partial-input-test"
+        model_id = CONFIG["model_id"]
+        config_version = CONFIG["version"]
+        input_tokens = 500  # known; output_tokens missing
+
+        record_usage(
+            request_id=request_id,
+            user_id=user_id,
+            operation=LLMUsageLog.Operation.GENERATE,
+            input_tokens=input_tokens,
+            output_tokens=None,  # Missing usage
+            model_id=model_id,
+            config_version=config_version,
+        )
+
+        record = LLMUsageLog.objects.get(request_id=request_id)
+        assert record.input_tokens == input_tokens, \
+            "known input_tokens must be kept as-is (500), not coerced"
+        assert record.output_tokens is None, \
+            "unknown output_tokens must be NULL, not 0"
+        assert record.estimated_cost_usd is not None, \
+            "partial usage cost comes from the known part and must be NOT NULL"
+        # Cost from the known part only (unknown part = 0 in the formula):
+        # 500 * 0.25 / 1e6 = 0.000125
+        assert record.estimated_cost_usd == Decimal("0.000125"), \
+            "estimated_cost_usd must be computed from the known input part"
+
+    def test_partial_usage_known_output_kept_input_null_cost_from_known_part(self):
+        """
+        Partial usage with known output_tokens only: the known counter is stored
+        as-is, the unknown input_tokens is NULL, and estimated_cost_usd is
+        computed from the known part and stays NOT NULL (FR-002-14).
+        """
+        request_id = uuid.uuid4()
+        user_id = "student-partial-output-test"
+        model_id = CONFIG["model_id"]
+        config_version = CONFIG["version"]
+        output_tokens = 1500  # known; input_tokens missing
+
+        record_usage(
+            request_id=request_id,
+            user_id=user_id,
+            operation=LLMUsageLog.Operation.GENERATE,
+            input_tokens=None,  # Missing usage
+            output_tokens=output_tokens,
+            model_id=model_id,
+            config_version=config_version,
+        )
+
+        record = LLMUsageLog.objects.get(request_id=request_id)
+        assert record.input_tokens is None, \
+            "unknown input_tokens must be NULL, not 0"
+        assert record.output_tokens == output_tokens, \
+            "known output_tokens must be kept as-is (1500), not coerced"
+        assert record.estimated_cost_usd is not None, \
+            "partial usage cost comes from the known part and must be NOT NULL"
+        # Cost from the known part only (unknown part = 0 in the formula):
+        # 1500 * 1.25 / 1e6 = 0.001875
+        assert record.estimated_cost_usd == Decimal("0.001875"), \
+            "estimated_cost_usd must be computed from the known output part"
+
+    def test_aggregation_skips_null_estimated_cost_and_includes_genuine_zero(self):
+        """
+        Monthly aggregation filters by estimated_cost_usd IS NOT NULL — the
+        cost column, NOT zero token counts (FR-002-14, data-model §7
+        «Наслідки для агрегації»):
+
+        - fully unknown record (NULL, NULL, NULL) is skipped because its cost
+          is NULL (unknown ≠ zero) — never summed, never coerced to 0;
+        - genuine zero (0, 0, 0.000000) IS included: it is a known fact and a
+          legitimate addend that contributes exactly 0.00 to the sum;
+        - the known record contributes its full cost.
+        """
+        user_id = "student-agg-null-test"
         config_version = CONFIG["version"]
 
-        # Create complete record
-        complete_request_id = uuid.uuid4()
+        # Known record — fully included in the sum:
+        # (100 * 0.25/1e6) + (80 * 1.25/1e6) = 0.000025 + 0.0001 = 0.000125
+        # (exact at the field's 6 decimal places — no quantization drift)
         record_usage(
-            request_id=complete_request_id,
+            request_id=uuid.uuid4(),
             user_id=user_id,
             operation=LLMUsageLog.Operation.GENERATE,
             input_tokens=100,
-            output_tokens=50,
+            output_tokens=80,
             model_id=CONFIG["model_id"],
             config_version=config_version,
         )
 
-        # Create incomplete record
-        incomplete_request_id = uuid.uuid4()
+        # Fully unknown record → estimated_cost_usd IS NULL → skipped by the
+        # cost filter (a token-count heuristic would try to add NULL instead).
         record_usage(
-            request_id=incomplete_request_id,
+            request_id=uuid.uuid4(),
             user_id=user_id,
             operation=LLMUsageLog.Operation.GENERATE,
             input_tokens=None,
@@ -396,12 +552,143 @@ class TestMissingUsageHandling:
             config_version=config_version,
         )
 
-        # Monthly cost should only include complete record
+        # Genuine zero (0, 0, 0.000000) — known fact, stays in the sum and
+        # contributes exactly 0.00 (never dropped by a zero-token heuristic).
+        record_usage(
+            request_id=uuid.uuid4(),
+            user_id=user_id,
+            operation=LLMUsageLog.Operation.GENERATE,
+            input_tokens=0,
+            output_tokens=0,
+            model_id=CONFIG["model_id"],
+            config_version=config_version,
+        )
+
         monthly_cost = aggregate_monthly_cost(user_id=user_id, config_version=config_version)
 
-        # Expected: (100 * 0.25/1e6) + (50 * 1.25/1e6) = 0.000025 + 0.0000625 = 0.0000875
-        expected_cost = Decimal("0.0000875")
-        assert monthly_cost == pytest.approx(expected_cost, abs=Decimal("0.000001"))
+        # Known contributes 0.000125; unknown contributes nothing (skipped via
+        # IS NULL); genuine zero contributes exactly 0.00 and remains part of
+        # the aggregation.
+        expected_cost = Decimal("0.000125")
+        assert monthly_cost == expected_cost
+
+    def test_aggregation_includes_genuine_zero_adds_exactly_zero(self):
+        """
+        Genuine zero (0, 0, 0.000000) is a known fact and remains in the
+        aggregation: it adds exactly 0.00 and never blocks neighbouring
+        records from being summed (FR-002-14 — unknown ≠ zero).
+        """
+        user_id = "student-genuine-zero-agg-test"
+        config_version = CONFIG["version"]
+
+        # Known record: (100 * 0.25/1e6) + (80 * 1.25/1e6) = 0.000125
+        # (exact at the field's 6 decimal places — no quantization drift)
+        record_usage(
+            request_id=uuid.uuid4(),
+            user_id=user_id,
+            operation=LLMUsageLog.Operation.GENERATE,
+            input_tokens=100,
+            output_tokens=80,
+            model_id=CONFIG["model_id"],
+            config_version=config_version,
+        )
+
+        # Genuine zero — a full-fledged addend contributing exactly 0.00.
+        record_usage(
+            request_id=uuid.uuid4(),
+            user_id=user_id,
+            operation=LLMUsageLog.Operation.GENERATE,
+            input_tokens=0,
+            output_tokens=0,
+            model_id=CONFIG["model_id"],
+            config_version=config_version,
+        )
+
+        monthly_cost = aggregate_monthly_cost(user_id=user_id, config_version=config_version)
+
+        # 0.000125 + 0.00 = 0.000125 — the zero row is included, not dropped.
+        assert monthly_cost == Decimal("0.000125")
+
+        # The genuine-zero row is a known fact in the log (cost NOT NULL):
+        zero_record = LLMUsageLog.objects.get(
+            user_id=user_id, input_tokens=0, output_tokens=0
+        )
+        assert zero_record.estimated_cost_usd is not None, \
+            "genuine zero must stay NOT NULL — it is not an unknown record"
+        assert zero_record.estimated_cost_usd == Decimal("0")
+
+    def test_count_unknown_usage_counts_null_cost_without_gate(self):
+        """
+        count_unknown_usage(user_id, config_version) counts records with
+        estimated_cost_usd IS NULL, EXCLUDING operation=gate (FR-002-14,
+        data-model §7: skipped unknowns need a visible denominator for SC-006).
+
+        Expected RED until T-062: count_unknown_usage does not exist yet, so
+        this test fails with ImportError — the intended red cause for T-061.
+        """
+        from ai_tutor_service.providers.usage import count_unknown_usage  # added in T-062
+
+        user_id = "student-count-unknown-test"
+        config_version = CONFIG["version"]
+
+        # 1. learner fully-unknown → counted
+        record_usage(
+            request_id=uuid.uuid4(),
+            user_id=user_id,
+            operation=LLMUsageLog.Operation.GENERATE,
+            input_tokens=None,
+            output_tokens=None,
+            model_id=CONFIG["model_id"],
+            config_version=config_version,
+        )
+        # 2. learner fully-unknown → counted
+        record_usage(
+            request_id=uuid.uuid4(),
+            user_id=user_id,
+            operation=LLMUsageLog.Operation.GUARD,
+            input_tokens=None,
+            output_tokens=None,
+            model_id=CONFIG["model_id"],
+            config_version=config_version,
+        )
+        # 3. gate fully-unknown → NOT counted (gate is outside learner metrics)
+        record_usage(
+            request_id=uuid.uuid4(),
+            user_id=user_id,
+            operation=LLMUsageLog.Operation.GATE,
+            input_tokens=None,
+            output_tokens=None,
+            model_id=CONFIG["guard_model_id"],
+            config_version=config_version,
+        )
+        # 4. learner with known cost → NOT counted
+        record_usage(
+            request_id=uuid.uuid4(),
+            user_id=user_id,
+            operation=LLMUsageLog.Operation.GENERATE,
+            input_tokens=100,
+            output_tokens=80,
+            model_id=CONFIG["model_id"],
+            config_version=config_version,
+        )
+        # 5. learner genuine zero (0, 0, 0.000000) → NOT counted (cost NOT NULL)
+        record_usage(
+            request_id=uuid.uuid4(),
+            user_id=user_id,
+            operation=LLMUsageLog.Operation.GENERATE,
+            input_tokens=0,
+            output_tokens=0,
+            model_id=CONFIG["model_id"],
+            config_version=config_version,
+        )
+
+        unknown_count = count_unknown_usage(
+            user_id=user_id, config_version=config_version
+        )
+        assert unknown_count == 2, (
+            "count_unknown_usage must count learner records with "
+            "estimated_cost_usd IS NULL and exclude gate"
+        )
 
 
 # =============================================================================
@@ -579,6 +866,35 @@ class TestMonthlyAggregationBudget:
         # 3 * 0.000375 = 0.001125
         expected_cost = Decimal("0.001125")
         assert total_cost == expected_cost
+
+    def test_aggregate_monthly_cost_signature_and_decimal_return(self):
+        """
+        Signature and Decimal return of aggregate_monthly_cost are UNCHANGED
+        by the FR-002-14 NULL semantics (contract lock, T-061):
+
+        - parameters stay exactly (user_id, config_version), both required
+          with no defaults;
+        - the return value is a Decimal, even when no qualifying records
+          exist (empty sum).
+        """
+        sig = inspect.signature(aggregate_monthly_cost)
+        params = list(sig.parameters.keys())
+        assert params == ["user_id", "config_version"], (
+            f"aggregate_monthly_cost signature must stay (user_id, config_version), "
+            f"got {params}"
+        )
+        for name, param in sig.parameters.items():
+            assert param.default is inspect.Parameter.empty, (
+                f"parameter {name!r} must stay required (no default)"
+            )
+
+        result = aggregate_monthly_cost(
+            user_id="student-signature-test-no-records",
+            config_version=CONFIG["version"],
+        )
+        assert isinstance(result, Decimal), (
+            f"aggregate_monthly_cost must return Decimal, got {type(result).__name__}"
+        )
 
 
 # =============================================================================

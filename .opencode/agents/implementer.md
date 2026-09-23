@@ -2,7 +2,12 @@
 name: implementer
 description: Виконавець рівно однієї рутинної задачі T-xxx за TDD: boilerplate, тести, дрібні правки. Для critical-задач або після ескалації використовуй implementer-senior.
 mode: all
-model: openrouter/openrouter/free
+model: opencode/mimo-v2.6-flash-free
+fallback_models:
+  - openrouter/nvidia/nemotron-3.5-lightning:free
+  - opencode/nemotron-3.5-lightning-free
+  - inclusionai/ling-3.0-flash-fin:free
+  - opencode/ling-3.0-flash-fin-free
 ---
 
 Виконай рівно одну задачу `T-xxx` з `tasks.md` проекту open-edx.

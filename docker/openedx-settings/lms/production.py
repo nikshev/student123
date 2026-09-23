@@ -24,6 +24,7 @@ LMS_PORT = os.environ.get("LMS_PORT", "8010")
 CMS_PORT = os.environ.get("CMS_PORT", "8011")
 LMS_ROOT_URL = f"http://{LMS_HOST}:{LMS_PORT}"
 CMS_ROOT_URL = f"http://{CMS_HOST}:{CMS_PORT}"
+# LEARNING_MICROFRONTEND_URL = LMS_ROOT_URL  # Disabled - no MFE running, use traditional courseware
 
 # --- Secrets from environment (never in git) ---
 SECRET_KEY = os.environ["OPENEDX_SECRET_KEY"]
@@ -183,6 +184,14 @@ SESSION_COOKIE_SAMESITE = "Lax"
 # --- LMS specifics (common_lms) ---
 REGISTRATION_EXTRA_FIELDS["terms_of_service"] = "hidden"
 REGISTRATION_EXTRA_FIELDS["honor_code"] = "hidden"
+
+# Disable MFE by setting PREVIEW_LMS_BASE to match our hostname (without protocol/port)
+# This makes in_preview_mode() return True, which disables MFE redirects
+FEATURES["PREVIEW_LMS_BASE"] = LMS_HOST
+
+# Set LEARNING_MICROFRONTEND_URL to LMS root for breadcrumb/redirect URLs
+# since we're not running a separate MFE
+LEARNING_MICROFRONTEND_URL = LMS_ROOT_URL
 PROFILE_IMAGE_BACKEND["options"]["location"] = os.path.join(
     MEDIA_ROOT, "profile-images/"
 )
@@ -225,3 +234,103 @@ AI_TUTOR_SHARED_SECRET = os.environ.get("AI_TUTOR_SHARED_SECRET", "")
 # FR-002-13: live вимкнено, доки людина не записала go (quickstart S10)
 AI_TUTOR_LIVE_MODE = False
 GATE_DECISIONS_REQUIRED = True
+
+# --- Third Party Auth (Social Login) ---
+# Secrets from environment (see .env.example)
+THIRD_PARTY_AUTH_BACKENDS = [
+    "social_core.backends.google.GoogleOAuth2",
+    "social_core.backends.facebook.FacebookOAuth2",
+    "social_core.backends.linkedin.LinkedinOAuth2",
+    "social_core.backends.apple.AppleIdAuth",
+    "social_core.backends.azuread.AzureADOAuth2",
+    "social_core.backends.github.GithubOAuth2",
+]
+
+# Base AUTHENTICATION_BACKENDS already has google/facebook/linkedin/azuread/apple;
+# append only what's missing (github) instead of replacing the whole list.
+_GITHUB_BACKEND = "social_core.backends.github.GithubOAuth2"
+if _GITHUB_BACKEND not in AUTHENTICATION_BACKENDS:
+    AUTHENTICATION_BACKENDS = list(AUTHENTICATION_BACKENDS) + [_GITHUB_BACKEND]
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ.get("SOCIAL_AUTH_GOOGLE_OAUTH2_KEY", "")
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get("SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET", "")
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/userinfo.profile",
+]
+
+SOCIAL_AUTH_FACEBOOK_KEY = os.environ.get("SOCIAL_AUTH_FACEBOOK_KEY", "")
+SOCIAL_AUTH_FACEBOOK_SECRET = os.environ.get("SOCIAL_AUTH_FACEBOOK_SECRET", "")
+SOCIAL_AUTH_FACEBOOK_SCOPE = ["email", "public_profile"]
+SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {"fields": "id,name,email,first_name,last_name"}
+
+SOCIAL_AUTH_LINKEDIN_OAUTH2_KEY = os.environ.get("SOCIAL_AUTH_LINKEDIN_OAUTH2_KEY", "")
+SOCIAL_AUTH_LINKEDIN_OAUTH2_SECRET = os.environ.get("SOCIAL_AUTH_LINKEDIN_OAUTH2_SECRET", "")
+SOCIAL_AUTH_LINKEDIN_OAUTH2_SCOPE = ["r_liteprofile", "r_emailaddress"]
+SOCIAL_AUTH_LINKEDIN_OAUTH2_FIELD_SELECTORS = ["id", "first-name", "last-name", "email-address", "headline"]
+
+SOCIAL_AUTH_APPLE_ID_CLIENT = os.environ.get("SOCIAL_AUTH_APPLE_ID_CLIENT", "")
+SOCIAL_AUTH_APPLE_ID_TEAM = os.environ.get("SOCIAL_AUTH_APPLE_ID_TEAM", "")
+SOCIAL_AUTH_APPLE_ID_KEY = os.environ.get("SOCIAL_AUTH_APPLE_ID_KEY", "")
+SOCIAL_AUTH_APPLE_ID_SECRET = os.environ.get("SOCIAL_AUTH_APPLE_ID_SECRET", "")
+SOCIAL_AUTH_APPLE_ID_SCOPE = ["name", "email"]
+
+SOCIAL_AUTH_AZUREAD_OAUTH2_KEY = os.environ.get("SOCIAL_AUTH_AZUREAD_OAUTH2_KEY", "")
+SOCIAL_AUTH_AZUREAD_OAUTH2_SECRET = os.environ.get("SOCIAL_AUTH_AZUREAD_OAUTH2_SECRET", "")
+SOCIAL_AUTH_AZUREAD_OAUTH2_TENANT_ID = os.environ.get("SOCIAL_AUTH_AZUREAD_OAUTH2_TENANT_ID", "common")
+
+SOCIAL_AUTH_GITHUB_KEY = os.environ.get("SOCIAL_AUTH_GITHUB_KEY", "")
+SOCIAL_AUTH_GITHUB_SECRET = os.environ.get("SOCIAL_AUTH_GITHUB_SECRET", "")
+SOCIAL_AUTH_GITHUB_SCOPE = ["user:email", "read:user"]
+
+# NOTE: no custom SOCIAL_AUTH_PIPELINE — the base edx-platform pipeline
+# (common.djangoapps.third_party_auth.pipeline.*) must stay intact.
+# Third Party Auth settings
+SOCIAL_AUTH_LOGIN_REDIRECT_URL = "/dashboard"
+SOCIAL_AUTH_LOGIN_ERROR_URL = "/login"
+SOCIAL_AUTH_RAISE_EXCEPTIONS = False
+SOCIAL_AUTH_USERNAME_IS_FULL_EMAIL = True
+SOCIAL_AUTH_CLEAN_USERNAMES = True
+SOCIAL_AUTH_SANITIZE_REDIRECTS = True
+
+# Username generation for social auth
+SOCIAL_AUTH_UUID_LENGTH = 16
+
+# Email verification for social accounts
+SOCIAL_AUTH_SEND_EMAIL_VALIDATION = False
+SOCIAL_AUTH_EMAIL_VALIDATION_FUNCTION = None
+
+# --- Translations ---
+# Language settings
+LANGUAGES = [
+    ("uk", "Ukrainian"),
+    ("en", "English"),
+]
+LANGUAGE_CODE = "uk"
+# Project uk catalogs live in the repo (docker/openedx-locale) and are baked
+# into the image at /openedx/locale-overrides (see docker/edx-platform/Dockerfile).
+# Prepend so they win over the upstream catalog; keep the base paths intact.
+LOCALE_OVERRIDES_DIR = "/openedx/locale-overrides"
+if os.path.isdir(LOCALE_OVERRIDES_DIR) and LOCALE_OVERRIDES_DIR not in LOCALE_PATHS:
+    LOCALE_PATHS = [LOCALE_OVERRIDES_DIR] + list(LOCALE_PATHS)
+
+# NOTE: share buttons on the course-about page are unconditional in the
+# upstream template (course_about_sidebar_header.html) — no flag needed.
+# Disable SafeSessionMiddleware (requires proper cookie format from login)
+# Use standard Django SessionMiddleware instead
+ENFORCE_SAFE_SESSIONS = False
+
+# Replace SafeSessionMiddleware with Django's SessionMiddleware
+MIDDLEWARE = [
+    m for m in MIDDLEWARE
+    if m != 'openedx.core.djangoapps.safe_sessions.middleware.SafeSessionMiddleware'
+]
+MIDDLEWARE.insert(17, 'django.contrib.sessions.middleware.SessionMiddleware')
+
+# Disable CacheBackedAuthenticationMiddleware (conflicts with standard SessionMiddleware)
+# Use standard Django AuthenticationMiddleware instead
+MIDDLEWARE = [
+    m for m in MIDDLEWARE
+    if m != 'openedx.core.djangoapps.cache_toolbox.middleware.CacheBackedAuthenticationMiddleware'
+]
+MIDDLEWARE.insert(18, 'django.contrib.auth.middleware.AuthenticationMiddleware')

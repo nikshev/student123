@@ -159,6 +159,13 @@ ACE_CHANNEL_TRANSACTIONAL_EMAIL = "django_email"
 EMAIL_FILE_PATH = "/tmp/openedx/emails"
 
 LANGUAGE_COOKIE_NAME = "openedx-language-preference"
+
+# LMS and Studio share the project-owned Ukrainian gettext catalogs, baked into
+# the image at /openedx/locale-overrides (see docker/edx-platform/Dockerfile).
+LOCALE_OVERRIDES_DIR = "/openedx/locale-overrides"
+if os.path.isdir(LOCALE_OVERRIDES_DIR) and LOCALE_OVERRIDES_DIR not in LOCALE_PATHS:
+    LOCALE_PATHS = [LOCALE_OVERRIDES_DIR] + list(LOCALE_PATHS)
+
 X_FRAME_OPTIONS = "SAMEORIGIN"
 
 # --- Features ---

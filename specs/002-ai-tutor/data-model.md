@@ -139,11 +139,52 @@ Timestamp додає tracking-система. `question.asked` публікує�
 
 ## 7. LLM usage log
 
-Первинний запис SC-006 (витрати), append-only service log: `request_id`,
-`user_id`, `model_id`, `operation` (`generate/guard/off_topic/gate`), input і
-output token counts, `estimated_cost_usd`, `config_version`, timestamp.
-Ціна обчислюється тільки за rates тієї ж версії YAML; provider invoice є
-контрольною звіркою, не заміною первинного запису.
+Первинний запис SC-006 (витрати), append-only service log. Ціна обчислюється
+тільки за rates тієї ж версії YAML; provider invoice є контрольною звіркою, не
+заміною первинного запису.
+
+| Поле | Тип | Правила |
+|---|---|---|
+| `id` | UUID | server-generated PK |
+| `request_id` | UUID | обов'язковий, індексований; не PK — кілька операцій на запит |
+| `user_id`, `model_id` | String | обов'язкові |
+| `operation` | Enum `generate/guard/off_topic/gate` | обов'язковий; `gate` не входить у learner cost |
+| `input_tokens` | PositiveInteger\|null | `null=True, blank=True`; NULL = unknown |
+| `output_tokens` | PositiveInteger\|null | `null=True, blank=True`; NULL = unknown |
+| `estimated_cost_usd` | Decimal(12,6)\|null | `null=True, blank=True`; NULL = unknown |
+| `config_version` | SemVer string | обов'язковий, `null=False, blank=False` |
+| `created_at` | DateTime | UTC, `auto_now_add` |
+
+### NULL vs 0 — інваріант «unknown ≠ zero»
+
+- **unknown**: провайдер не повернув usage (або повернув неповний usage).
+  Записується як `(input_tokens, output_tokens, estimated_cost_usd) =
+  (NULL, NULL, NULL)`. Вартість операції невідома — не нуль.
+- **genuine zero**: usage відомий і дорівнює нулю. Записується як
+  `(0, 0, 0.000000)` — повноцінний відомий факт і повноправний доданок
+  агрегації (додає 0.00).
+- **Частковий usage**: якщо відомий лише один з двох token counts, відомий
+  лічильник MUST зберігатися як є, невідомий — NULL, а `estimated_cost_usd`
+  MUST обчислюватися з відомої частини (невідома частина = 0 у розрахунку) і
+  лишатися NOT NULL. Повністю невідомий usage (обидва `None`) — усі три поля
+  NULL. Стан «обидва лічильники відомі, а вартість NULL» заборонений:
+  вартість є детермінованою функцією лічильників.
+- `clean()` не порівнює NULL з нулем: перевірка на невід'ємність діє лише для
+  NOT NULL значень.
+
+### Наслідки для агрегації (SC-006)
+
+- Агрегація фільтрує `estimated_cost_usd IS NOT NULL` — саме за вартістю, а не
+  за нульовими token counts. Стара евристика «`input_tokens == 0 AND
+  output_tokens == 0` → пропустити» неявно відкидала й genuine zero і після
+  переходу на NULL не застосовується.
+- `operation = gate` виключається з learner cost незалежно від NULL.
+- Пропущені unknown-записи рахуються окремо і віддаються разом з агрегатом:
+  метрика без видимого знаменника пропусків мовчки занижує SC-006
+  (конституція V).
+- Історичний cutoff `USAGE_UNKNOWN_BACKFILL_CUTOFF = 2026-06-01`: записи до цієї
+  дати зі значеннями `(0, 0, 0.000000)` нерозрізнювані з unknown і трактуються
+  як unknown (одноразовий backfill, див. plan.md).
 
 ## 8. UI-стан чату
 

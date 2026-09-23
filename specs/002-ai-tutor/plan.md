@@ -139,6 +139,111 @@ XBlock знає Open edX user/course/unit і публікує події, але
 Кожен підмодуль має одну мету й контракт. `tutor-plugin/` є лише deployment
 adapter. Обґрунтування — [research.md](./research.md) R1–R7/R15.
 
+## Поправка 2026-09-23: unknown ≠ zero в LLM usage log (FR-002-14)
+
+Мале spec-зміна без зміни trust boundaries. Проблема: `record_usage` писав
+`0/0/Decimal("0")` коли usage невідомий, змішуючи «unknown cost» з «zero cost»
+і занижуючи SC-006. Рішення (затверджений scope): всі три колонки
+`LLMUsageLog.input_tokens/output_tokens/estimated_cost_usd` стають nullable;
+NULL = unknown; агрегація пропускає NULL.
+
+### Міграційний підхід
+
+- `ai_tutor_service/providers/migrations/0002_usage_nullable.py`:
+  `AlterField` ×3 (`input_tokens`, `output_tokens` → `PositiveIntegerField`
+  `null=True, blank=True`; `estimated_cost_usd` → `DecimalField(12,6)`
+  `null=True, blank=True`). PK, FK, індекси, `config_version`/`request_id` —
+  без змін. `makemigrations --check` мусить бути чистим після задачі.
+- `ai_tutor_service/providers/migrations/0003_backfill_unknown_usage.py`:
+  `RunPython(forwards, backwards)` через `apps.get_model` (без raw-DDL):
+  forwards NULL-ить рядки за правилом нижче; backwards пише `0/0/0.000000`
+  **усім** NULL-рядкам (інакше зворотний `AlterField` на NOT NULL впаде —
+  свідомо lossy, задокументувати в docstring міграції). Обидва напрями
+  ідемпотентні (повторний прогін не змінює вже конвертовані рядки).
+
+### DATA-LOSS DECISION REQUIRED — обране backfill-правило (консервативне)
+
+Forwards конвертує `0 → NULL` **лише** при одночасному виконанні всіх чотирьох
+умов (AND):
+
+```text
+input_tokens = 0 AND output_tokens = 0
+AND estimated_cost_usd = 0
+AND created_at < 2026-06-01
+```
+
+Чому це безпечно: це рівно той відбиток, який могла лишити стара unknown-гілка
+`record_usage` (писала три нулі й нічого іншого). Genuine zero у даних до
+cutoff нерозрізнюваний з unknown у принципі, тому рішення береться за часом
+(`created_at`), а не за вмістом. Альтернативне прочитання «все до переходу на
+NULL-семантику вважати unknown» відкинуте: воно стерло б свіжі genuine-zero
+рядки, насамперед `operation=gate` (сьогодні вже викликається з
+`input_tokens=None, output_tokens=None`). Частковий usage (відомий лише один
+token count) рахується з відомої частини: відомий лічильник зберігається,
+невідомий — NULL, вартість обчислюється з відомої частини (див.
+data-model.md §7).
+
+Фактичний наслідок для цього репо: `0001_initial` датована 2026-09-19, рядків
+із `created_at < 2026-06-01` не існує — backfill на поточному дампі конвертує
+**нуль рядків**, зміна де-факто schema-only. Правило все одно потрібне для
+прод-дампів, скопійованих зі старих середовищ.
+
+### Cutoff-константа: виняток із принципу III (обґрунтування)
+
+`USAGE_UNKNOWN_BACKFILL_CUTOFF = date(2026, 6, 1)` живе в
+`ai_tutor_service/providers/models.py` як іменована константа модуля, **не** в
+`tutor_config.yaml`. Принцип III покриває константи, що змінюють висновок на
+кожному прогоні (ліміти, пороги, таймаути, **cost rates — лишаються в YAML**).
+Cutoff не налаштовує поведінку: це історичний факт про один уже застосований
+data-fix, який читає рівно один споживач — міграція `0003`, стан якої вже
+записаний у `django_migrations`. У YAML він виглядав би переналаштовуваним,
+хоч після `migrate` змінити його неможливо. Порівнюваність прогонів
+забезпечує `config_version`, як і раніше. Міграція імпортує константу, не
+дублює літерал; тотожність літерала константі фіксує тест (T-057).
+
+### Маркери трасування (щоб `scripts/trace.py` лишився зеленим)
+
+- `ai_tutor_service/providers/models.py` лишається `# impl: FR-002-14`.
+- `ai_tutor_service/providers/usage.py` → `# impl: FR-002-09, FR-002-14`
+  (запис/агрегація історично FR-002-09, NULL-семантика — FR-002-14;
+  `trace.py` підтримує список через кому, ланцюг замкнений для обох FR).
+- `ai_tutor_service/tests/unit/test_usage_log.py` →
+  `# verifies: FR-002-09, FR-002-14`; новий
+  `ai_tutor_service/tests/unit/test_usage_backfill_migration.py` →
+  `# verifies: FR-002-14`.
+- Розбіжність доки/коду в `usage.py` (docstring обіцяє `None`, код пише `0`)
+  виправляється в T-060 приведенням docstring і коду до NULL-семантики.
+
+### Superset / dataset docs — нотатка (нових `.md` не створюємо)
+
+Окремих Superset/dataset доків у `docs/` немає (лише `PRD-open-edx.md` і
+`traceability.md`). Коли вони з'являться, зафіксувати:
+
+```text
+cost = SUM(estimated_cost_usd)
+       WHERE estimated_cost_usd IS NOT NULL AND operation <> 'gate'
+       GROUP BY config_version;
+unknown_cnt = COUNT(*) WHERE estimated_cost_usd IS NULL;
+```
+
+Фільтр лишити явним, хоч `SUM` ігнорує NULL сам. Поруч з cost-дашбордом
+обов'язкова метрика `unknown_cnt`. `COALESCE(tokens, 0)` / `COALESCE(cost, 0)`
+заборонені — вони відновлюють саме ту помилку, яку знімає поправка. Розріз
+завжди по `config_version`; pre-2026-06-01 зрізи позначати «містять unknown».
+
+### Повторна перевірка конституції
+
+- I. Трасування: PASS — подвійні маркери закривають FR-002-09 і FR-002-14.
+- II. Test-First/без мережі: PASS — усі нові тести на ORM/фікстурах, socket/DNS
+  заборонені як і раніше.
+- III. YAML: PASS з обґрунтованим винятком — rates лишаються в YAML, cutoff —
+  історичний факт у модулі (див. вище).
+- IV. Межі: PASS — запис usage лишається єдиною відповідальністю
+  `providers/`; quota (`limits/`) не є джерелом метрики.
+- V. Метрики з подій: PASS і посилено — `count_unknown_usage()` робить
+  пропуски видимими, SC-006 не занижується мовчки.
+- Секрети: PASS — міграції й тести не торкаються секретів.
+
 ## Complexity Tracking
 
 > **Fill ONLY if Constitution Check has violations that must be justified**

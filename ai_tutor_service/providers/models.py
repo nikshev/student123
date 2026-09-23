@@ -10,8 +10,19 @@ reconciliation only, not replacement of primary record.
 """
 
 import uuid
+from datetime import date
+
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
+
+# Historical cutoff for the one-off unknown-usage backfill (FR-002-14):
+# rows created before this date with (0, 0, 0.000000) are indistinguishable
+# from "unknown" written by the old record_usage branch and are converted to
+# NULL by migration 0003_backfill_unknown_usage. Lives here (not in
+# tutor_config.yaml) because it is a fact about an already-applied data-fix,
+# not a per-run behaviour knob — see plan.md "Поправка 2026-09-23".
+USAGE_UNKNOWN_BACKFILL_CUTOFF = date(2026, 6, 1)
 
 
 class LLMUsageLog(models.Model):
@@ -37,19 +48,19 @@ class LLMUsageLog(models.Model):
     )
     input_tokens = models.PositiveIntegerField(
         validators=[MinValueValidator(0)],
-        blank=False,
-        null=False,
+        blank=True,
+        null=True,
     )
     output_tokens = models.PositiveIntegerField(
         validators=[MinValueValidator(0)],
-        blank=False,
-        null=False,
+        blank=True,
+        null=True,
     )
     estimated_cost_usd = models.DecimalField(
         max_digits=12,
         decimal_places=6,
-        blank=False,
-        null=False,
+        blank=True,
+        null=True,
     )
     config_version = models.CharField(max_length=50, blank=False, null=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -68,11 +79,13 @@ class LLMUsageLog(models.Model):
 
     def clean(self):
         super().clean()
-        if self.input_tokens < 0:
+        # NULL = unknown (FR-002-14): non-negativity applies only to known
+        # (NOT NULL) values; never compare NULL with zero.
+        if self.input_tokens is not None and self.input_tokens < 0:
             raise ValidationError({"input_tokens": "Input tokens cannot be negative."})
-        if self.output_tokens < 0:
+        if self.output_tokens is not None and self.output_tokens < 0:
             raise ValidationError({"output_tokens": "Output tokens cannot be negative."})
-        if self.estimated_cost_usd < 0:
+        if self.estimated_cost_usd is not None and self.estimated_cost_usd < 0:
             raise ValidationError({"estimated_cost_usd": "Estimated cost cannot be negative."})
         if not self.config_version or not self.config_version.strip():
             raise ValidationError({"config_version": "Config version is required."})

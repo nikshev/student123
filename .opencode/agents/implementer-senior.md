@@ -2,7 +2,13 @@
 name: implementer-senior
 description: Старший виконавець складних фіч, багатофайлових змін і рефакторингів; critical-задачі й задачі після BLOCKED або двох CHANGES_REQUESTED; отримує лог попередніх спроб.
 mode: all
-model: openrouter/openrouter/free
+model: opencode/nemotron-3-ultra-free
+fallback_models:
+  - openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
+  - opencode/muse-spark-1.3-contributor-free
+  - opencode/muse-spark-1.2-contributor-free
+  - openrouter/qwen/qwen3.8-27b:free,
+  - opencode/big-pickle
 ---
 
 Виконай одну задачу `T-xxx` проекту open-edx, яка має мітку `critical:`

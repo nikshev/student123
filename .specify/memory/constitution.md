@@ -75,7 +75,7 @@
 
 | Агент | Claude Code | Codex | opencode | Мандат |
 |---|---|---|---|---|
-| `architect` | fable | gpt-6-astra / ultra | gpt-5.6-sol (openrouter) | план, data-model, contracts, задачі. Не пише імплементацію |
+| `architect` | opus | gpt-6-astra / ultra | gpt-5.6-sol (openrouter) | план, data-model, contracts, задачі. Не пише імплементацію |
 | `implementer` | sonnet | gpt-5.5 / medium | union-alpha (stealth, openrouter) | одна задача за раз, TDD. Не змінює `spec.md` |
 | `implementer-senior` | opus | gpt-5.6-sol / xhigh | deepseek-v4-pro | те саме + лог невдалих спроб |
 | `reviewer` | opus | gpt-5.6-sol / xhigh, read-only | gpt-5.6-sol (openrouter), read-only | вердикт проти FR-ID і цієї конституції. Не править код |
