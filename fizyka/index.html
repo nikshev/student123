@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Інтерактивні розрахунки — предмети</title>
+<title>Фізика — розрахунки</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -37,9 +37,24 @@
     margin: 0 auto;
     padding: 48px 20px 80px;
   }
-  h1 {
-    font-size: 1.6rem;
+  nav.breadcrumb {
+    font-size: 0.85rem;
+    color: var(--muted);
     margin-bottom: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35em;
+  }
+  nav.breadcrumb a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  nav.breadcrumb a:hover { text-decoration: underline; }
+  nav.breadcrumb .crumb-sep { opacity: 0.6; }
+  nav.breadcrumb .crumb-current { color: var(--fg); }
+  h1 {
+    font-size: 1.5rem;
+    margin: 12px 0 4px;
   }
   p.lead {
     color: var(--muted);
@@ -67,35 +82,37 @@
     font-size: 1.05rem;
   }
   li.card a:hover { text-decoration: underline; }
-  footer {
-    margin-top: 48px;
-    color: var(--muted);
-    font-size: 0.85rem;
-  }
 </style>
 </head>
 <body>
 <main>
-  <h1>Інтерактивні розрахунки</h1>
-  <p class="lead">Список предметів. Кожен предмет має власні розрахунки —
-  повзунки для чисел у задачі, а не готову відповідь.</p>
+  <nav class="breadcrumb" aria-label="Навігація">
+    <a href="../">Головна</a>
+    <span class="crumb-sep" aria-hidden="true">→</span>
+    <span class="crumb-current" aria-current="page">Фізика</span>
+  </nav>
+  <h1>Фізика</h1>
+  <p class="lead">Розрахунки до курсу. Повзунки для кожного числа в задачі —
+  сторінка перераховується наживо.</p>
 
-  <!-- Один предмет = один рядок нижче. -->
+  <!-- Один епізод = один рядок нижче. -->
   <ul class="list">
     <li class="card">
-      <a href="elektrotekhnika/">Електротехніка та електромеханіка</a>
+      <a href="fi04/">ФІ04 — Шлях і переміщення</a>
     </li>
     <li class="card">
-      <a href="fizyka/">Фізика</a><br />
-      <span style="color: var(--muted); font-weight: 400; font-size: 0.9rem;">Кінематика — 5 інтерактивних розрахунків</span>
+      <a href="fi05/">ФІ05 — Швидкість і площа під графіком</a>
     </li>
     <li class="card">
-      <a href="matematyka/">Математичний аналіз</a><br />
-      <span style="color: var(--muted); font-weight: 400; font-size: 0.9rem;">Матриці та визначники — 5 інтерактивних розрахунків</span>
+      <a href="fi07/">ФІ07 — Радіус кривизни</a>
+    </li>
+    <li class="card">
+      <a href="fi09/">ФІ09 — Період, частота, кутове прискорення</a>
+    </li>
+    <li class="card">
+      <a href="fi10/">ФІ10 — Міст лінійне↔кутове</a>
     </li>
   </ul>
-
-  <footer>Наступні предмети додаються по мірі готовності.</footer>
 </main>
 </body>
 </html>
