@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Трансформатор: будова, принцип роботи і коефіцієнт трансформації</title>
+<meta name="description" content="Як працює трансформатор: взаємоіндукція, формула U₂/U₁ = N₂/N₁, будова трансформатора підстанції в розрізі, розрахунок витків і струмів, навіщо ЛЕП висока напруга.">
+<link rel="canonical" href="https://nikshev.github.io/student123/blog/transformator-budova-pryntsyp-roboty/">
+<meta property="og:type" content="article">
+<meta property="og:locale" content="uk_UA">
+<meta property="og:site_name" content="Student123">
+<meta property="og:title" content="Трансформатор: будова, принцип роботи і коефіцієнт трансформації">
+<meta property="og:description" content="Як працює трансформатор: взаємоіндукція, формула U₂/U₁ = N₂/N₁, будова трансформатора підстанції в розрізі, розрахунок витків і струмів, навіщо ЛЕП висока напруга.">
+<meta property="og:url" content="https://nikshev.github.io/student123/blog/transformator-budova-pryntsyp-roboty/">
+<meta property="og:image" content="https://nikshev.github.io/student123/blog/img/fi92_rozriz-og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0f1b33">
+<link rel="icon" href="../img/favicon.svg" type="image/svg+xml">
+<style>:root{--bg:#f6f7fb;--paper:#fff;--fg:#151a26;--muted:#596173;--line:#dfe3ec;--accent:#0b6bb0;--warm:#c85a17;--navy:#0f1b33;--formula:#eef3fb;--task:#fff7ef;--task-line:#f1c9a5;color-scheme:light dark}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1220;--paper:#141b2d;--fg:#e8ebf2;--muted:#a3abbd;--line:#273049;--accent:#62c4ef;--warm:#ff9a52;--formula:#18223a;--task:#1f1a17;--task-line:#5a3d27}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+a{color:var(--accent);text-underline-offset:3px}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+header.site{background:var(--navy);color:#fff}
+header.site .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;flex-wrap:wrap;max-width:1000px}
+header.site a{color:#fff;text-decoration:none}
+.brand{font-weight:700;font-size:19px;display:flex;align-items:center;gap:8px}
+.brand .dot{width:12px;height:12px;border-radius:50%;background:#ff8a3d;box-shadow:16px 0 0 #35c6e8;margin-right:16px}
+header.site nav{display:flex;gap:16px;font-size:15px}
+header.site nav a{opacity:.85}header.site nav a:hover{opacity:1;text-decoration:underline}
+.crumbs{font-size:14px;color:var(--muted);margin:22px 0 6px}
+.crumbs a{color:var(--muted)}
+h1{font-size:clamp(28px,6vw,40px);line-height:1.2;margin:8px 0 14px;letter-spacing:-.01em}
+h2{font-size:clamp(23px,4.6vw,28px);line-height:1.3;margin:44px 0 12px;padding-top:8px;border-top:1px solid var(--line)}
+h3{font-size:20px;margin:28px 0 8px}
+.lead{font-size:20px;color:var(--muted);margin:0 0 10px}
+.meta{font-size:14px;color:var(--muted);margin:0 0 20px}
+.toc{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 18px;margin:0 0 8px}
+.toc summary{font-weight:600;cursor:pointer}
+.toc ol{margin:8px 0 4px;padding-left:22px}.toc li{margin:3px 0}
+p,ul,ol{margin:0 0 16px}
+li{margin:4px 0}
+strong{font-weight:650}
+figure{margin:24px 0;}
+figure img{width:100%;height:auto;display:block;border-radius:12px;background:#121826}
+figcaption{font-size:15px;color:var(--muted);margin-top:8px;line-height:1.5}
+.formula{background:var(--formula);border-left:4px solid var(--accent);border-radius:8px;padding:14px 16px;margin:18px 0;white-space:pre-wrap;font:19px/1.7 "STIX Two Text","Cambria Math","Times New Roman",serif;overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:16px;display:block;overflow-x:auto}
+th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{font-weight:650;background:var(--paper)}
+code{font:0.92em ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--formula);padding:1px 5px;border-radius:5px}
+.task{background:var(--task);border:1px solid var(--task-line);border-radius:12px;padding:6px 18px 4px;margin:22px 0}
+.task h3{margin-top:14px}
+.task ol{padding-left:22px}
+.note{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--warm);border-radius:8px;padding:12px 16px;margin:20px 0}
+.note p:last-child{margin-bottom:0}
+.video{margin:24px 0}
+.video button{position:relative;display:block;width:100%;padding:0;border:0;border-radius:12px;overflow:hidden;cursor:pointer;background:#000}
+.video button img{width:100%;height:auto;display:block;opacity:.92}
+.video .play{position:absolute;left:50%;top:50%;width:76px;height:54px;margin:-27px 0 0 -38px;border-radius:14px;background:#e62117}
+.video .play::after{content:"";position:absolute;left:30px;top:16px;border-style:solid;border-width:11px 0 11px 19px;border-color:transparent transparent transparent #fff}
+.video iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:12px;display:block}
+.video-cap{font-size:15px;color:var(--muted);margin:8px 0 0}
+.video .soon{position:absolute;left:12px;right:12px;bottom:12px;background:rgba(10,14,26,.86);color:#fff;font-size:15px;padding:8px 12px;border-radius:8px;text-align:left}
+.cta{background:var(--navy);color:#e8ebf2;border-radius:14px;padding:4px 20px 8px;margin:44px 0 20px}
+.cta h2{border:0;margin-top:16px;color:#fff}
+.cta a{color:#7fd3f5}
+.cta ul{padding-left:4px;list-style:none}.cta li{margin:10px 0}
+.related h2{font-size:22px}
+.cards{list-style:none;padding:0;display:grid;gap:18px;margin:24px 0 40px}
+.cards a{display:block;background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden;text-decoration:none;color:var(--fg)}
+.cards img{width:100%;height:auto;display:block}
+.cards .t{display:block;font-weight:700;font-size:21px;line-height:1.3;padding:14px 16px 4px}
+.cards .d{display:block;color:var(--muted);font-size:16px;padding:0 16px 16px}
+footer.site{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 32px;font-size:15px;color:var(--muted)}
+footer.site a{color:var(--muted)}
+@media (min-width:760px){.cards{grid-template-columns:1fr 1fr}}
+figcaption .zoom{white-space:nowrap;opacity:.8}
+@media (max-width:600px){body{font-size:17px}.formula{font-size:16px;padding:12px 12px}.lead{font-size:18px}}
+@media (min-width:601px){figcaption .zoom{display:none}}
+</style>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "Трансформатор: будова, принцип роботи і коефіцієнт трансформації", "description": "Як працює трансформатор: взаємоіндукція, формула U₂/U₁ = N₂/N₁, будова трансформатора підстанції в розрізі, розрахунок витків і струмів, навіщо ЛЕП висока напруга.", "image": "https://nikshev.github.io/student123/blog/img/fi92_rozriz-og.jpg", "datePublished": "2026-11-22", "dateModified": "2026-11-22", "inLanguage": "uk", "author": {"@type": "Organization", "name": "Student123", "url": "https://student123.page/"}, "publisher": {"@type": "Organization", "name": "Student123", "url": "https://student123.page/"}, "mainEntityOfPage": "https://nikshev.github.io/student123/blog/transformator-budova-pryntsyp-roboty/", "about": ["трансформатор", "будова трансформатора", "принцип роботи трансформатора", "коефіцієнт трансформації", "взаємоіндукція", "самоіндукція"], "video": [{"@type": "VideoObject", "name": "Фізика 22 — лекція «Електромагнітні явища»", "description": "Закон Фарадея, правило Ленца, генератор, самоіндукція, трансформатор і рівняння Максвелла — з розрізами реальних пристроїв.", "thumbnailUrl": "https://nikshev.github.io/student123/blog/img/fi_22_thumb-og.jpg", "uploadDate": "2026-12-04T18:00:00+02:00", "embedUrl": "https://www.youtube-nocookie.com/embed/FwGQAKl0S8Y", "contentUrl": "https://www.youtube.com/watch?v=FwGQAKl0S8Y"}, {"@type": "VideoObject", "name": "Фізика 22, практикум — 12 задач з розв'язанням", "description": "Задачі на закон Фарадея, правило Ленца, самоіндукцію, трансформатор і швидкість електромагнітних хвиль.", "thumbnailUrl": "https://nikshev.github.io/student123/blog/img/fi_22_p_thumb-og.jpg", "uploadDate": "2026-12-05T18:00:00+02:00", "embedUrl": "https://www.youtube-nocookie.com/embed/MtyqY32Asf8", "contentUrl": "https://www.youtube.com/watch?v=MtyqY32Asf8"}]}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Student123", "item": "https://student123.page/"}, {"@type": "ListItem", "position": 2, "name": "Статті", "item": "https://nikshev.github.io/student123/blog/"}, {"@type": "ListItem", "position": 3, "name": "Трансформатор", "item": "https://nikshev.github.io/student123/blog/transformator-budova-pryntsyp-roboty/"}]}</script>
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="brand" href="https://student123.page/"><span class="dot"></span>Student123</a>
+  <nav><a href="../">Статті</a><a href="https://student123.page/">Курси й тести</a><a href="https://www.youtube.com/channel/UCfhb-P1E8HmisE7oJzFYPRw">YouTube</a></nav>
+</div></header>
+<main class="wrap article">
+<nav class="crumbs" aria-label="Навігація"><a href="https://student123.page/">Student123</a> › <a href="../">Статті</a> › <span>Трансформатор</span></nav>
+<h1>Трансформатор: будова, принцип роботи і коефіцієнт трансформації</h1>
+<p class="lead">Дві котушки на спільному залізі — і з 230 вольтів виходить 36, а з 10 000 — 400. Розбираємо, чому напруги відносяться як витки, що всередині трансформатора підстанції і як розв&#x27;язувати задачі на коефіцієнт трансформації.</p>
+<p class="meta">22 листопада 2026 · 8 хв читання · Фізика 22 · Електромагнітні явища</p>
+<details class="toc" open><summary>Зміст</summary><ol><li><a href="#navishcho-transformator">Навіщо трансформатор</a></li><li><a href="#vzaiemoinduktsiia-dvi-kotushky-poruch">Взаємоіндукція: дві котушки поруч</a></li><li><a href="#pryntsyp-roboty-chomu-napruhy-vidnosiatsia-iak-vytky">Принцип роботи: чому напруги відносяться як витки</a></li><li><a href="#budova-transformatora-pidstantsiia-v-rozrizi">Будова трансформатора: підстанція в розрізі</a></li><li><a href="#navishcho-liniiam-elektroperedachi-vysoka-napruha">Навіщо лініям електропередачі висока напруга</a></li><li><a href="#samoinduktsiia-rodych-transformatora">Самоіндукція: родич трансформатора</a></li><li><a href="#rozv-iazuiemo-zadachu">Розв&#x27;язуємо задачу</a></li><li><a href="#de-trapliaiutsia-transformatory">Де трапляються трансформатори</a></li><li><a href="#korotko">Коротко</a></li></ol></details>
+<h2 id="navishcho-transformator">Навіщо трансформатор</h2>
+<p>У сирому котловані ручний інструмент і переносні лампи живлять від 36 або 24 вольтів: у вологому місці 230 вольтів можуть убити. А з мережі приходять саме 230. Знизити напругу без втрат на нагрівання, як це зробив би резистор, уміє лише трансформатор.</p>
+<p>Він же піднімає напругу на електростанції до сотень кіловольтів і опускає її на підстанції біля будинку. Працює трансформатор на <strong>електромагнітній індукції</strong> — і лише на <strong>змінному</strong> струмі. Чому саме так — нижче.</p>
+<h2 id="vzaiemoinduktsiia-dvi-kotushky-poruch">Взаємоіндукція: дві котушки поруч</h2>
+<p>Постав дві котушки поруч. Змінний струм у першій створює змінний магнітний потік, частина якого пронизує другу. За законом Фарадея в другій котушці виникає ЕРС — електрорушійна сила. Це <strong>взаємоіндукція</strong>.</p>
+<div class="formula">ε₂ = −M · ΔI₁ / Δt</div>
+<p>ЕРС у другій котушці пропорційна швидкості зміни струму в першій. Коефіцієнт M — взаємна індуктивність, у генрі (Гн). Вона однакова в обидва боки: змінний струм у другій котушці наведе в першій ЕРС з тим самим коефіцієнтом.</p>
+<p>Чому потрібен саме <strong>змінний</strong> струм: постійний струм створює постійний потік, а ЕРС індукції виникає лише тоді, коли потік змінюється. На постійному струмі вторинна обмотка мовчить, а первинна — це просто дріт з малим опором, і струм у ній стає великим: обмотка перегрівається.</p>
+<figure><a href="../img/fi92_zariadka-1600.webp" target="_blank" rel="noopener"><img src="../img/fi92_zariadka-800.webp" srcset="../img/fi92_zariadka-800.webp 800w, ../img/fi92_zariadka-1600.webp 1600w" sizes="(max-width: 760px) 100vw, 720px" width="1600" height="900" alt="Бездротова зарядка: дві плоскі котушки, ферит, телефон над підставкою" loading="lazy" decoding="async"></a><figcaption>Бездротова зарядка — трансформатор без осердя: котушка в підставці, котушка в телефоні, між ними повітря. <span class="zoom">Натисни, щоб збільшити.</span></figcaption></figure>
+<p>Взаємоіндукція працює й без заліза. Бездротова зарядка телефону — це дві плоскі котушки: одна в підставці, друга в телефоні. Струм у нижній змінюється 100–200 тисяч разів за секунду, частина його потоку проходить крізь верхню котушку, і там виникає ЕРС. Пластинка фериту за котушкою не пускає поле до батареї. Зсунув телефон — крізь його котушку проходить менше ліній, і зарядка сповільнюється. Щоб зв'язок був сильним, котушки надягають на <strong>спільне залізне осердя</strong> — так і виходить трансформатор.</p>
+<h2 id="pryntsyp-roboty-chomu-napruhy-vidnosiatsia-iak-vytky">Принцип роботи: чому напруги відносяться як витки</h2>
+<p>Трансформатор — дві обмотки на спільному феромагнітному осерді. Первинну (N₁ витків) підключають до мережі, до вторинної (N₂ витків) — споживача.</p>
+<p>Осердя збирає майже весь потік, тож <strong>потік крізь кожен виток обох обмоток однаковий</strong>. Тоді й ЕРС на один виток однакова, і виходить ланцюжок:</p>
+<div class="formula">ε на виток = ΔΦ / Δt        — однакова для обох обмоток
+U₁ ≈ N₁ · ΔΦ / Δt,   U₂ ≈ N₂ · ΔΦ / Δt
+U₂ / U₁ = N₂ / N₁ = k</div>
+<p>Відношення k — <strong>коефіцієнт трансформації</strong>.</p>
+<ul>
+<li>k &gt; 1 — у вторинній більше витків, напруга <strong>підвищується</strong>: підвищувальний трансформатор.</li>
+<li>k &lt; 1 — витків менше, напруга <strong>знижується</strong>: знижувальний.</li>
+</ul>
+<div class="note">
+<p><strong>Увага до означення k.</strong> Тут k = N₂ / N₁. У багатьох шкільних підручниках і довідниках з електротехніки коефіцієнт означають навпаки: k = N₁ / N₂ = U₁ / U₂ — і тоді k &gt; 1 означає <strong>знижувальний</strong> трансформатор. Обидва записи правильні, важливо, яке означення в твоєму підручнику. Перевіряй за змістом: напруга більша там, де більше витків.</p>
+</div>
+<h3 id="strum-i-potuzhnist">Струм і потужність</h3>
+<p>Ідеальний трансформатор не гріється, тож потужність на вході дорівнює потужності на виході:</p>
+<div class="formula">U₁ · I₁ = U₂ · I₂   →   I₁ / I₂ = U₂ / U₁ = N₂ / N₁</div>
+<p>Напруга знижується — струм у стільки ж разів зростає. Тому у вторинній обмотці знижувального трансформатора дріт товстий, а в первинній — тонкий. Справжній трансформатор трохи гріється: дріт обмоток має опір, а в осерді течуть вихрові струми й осердя перемагнічується. ККД (коефіцієнт корисної дії) великих трансформаторів — понад 98 %, малих — помітно менше, 80–95 %.</p>
+<h2 id="budova-transformatora-pidstantsiia-v-rozrizi">Будова трансформатора: підстанція в розрізі</h2>
+<figure><a href="../img/fi92_rozriz-1600.webp" target="_blank" rel="noopener"><img src="../img/fi92_rozriz-800.webp" srcset="../img/fi92_rozriz-800.webp 800w, ../img/fi92_rozriz-1600.webp 1600w" sizes="(max-width: 760px) 100vw, 720px" width="1600" height="900" alt="Трансформатор міської підстанції в розрізі: бак з олією, осердя, обмотки, вводи, розширювач" loading="lazy" decoding="async"></a><figcaption>Трансформатор 10/0,4 кВ: обмотки низької напруги ближче до осердя, високої — зовні; бак з олією, радіатори, вводи, розширювач. <span class="zoom">Натисни, щоб збільшити.</span></figcaption></figure>
+<p>Так виглядає трансформатор міської підстанції, що знижує 10 000 вольтів до 400:</p>
+<table>
+<thead>
+<tr>
+<th>Частина</th>
+<th>Що робить</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>осердя з тонких листів сталі</td>
+<td>проводить магнітний потік; листи ізольовані один від одного, щоб вихрові струми були слабкі</td>
+</tr>
+<tr>
+<td>обмотка низької напруги (НН), 400 В</td>
+<td>ближче до стрижня осердя</td>
+</tr>
+<tr>
+<td>обмотка високої напруги (ВН), 10 кВ</td>
+<td>зовні, з більшою кількістю витків</td>
+</tr>
+<tr>
+<td>бак з олією</td>
+<td>олія ізолює обмотки й забирає тепло</td>
+</tr>
+<tr>
+<td>радіатори</td>
+<td>ребра, крізь які олія віддає тепло повітрю</td>
+</tr>
+<tr>
+<td>фарфорові вводи</td>
+<td>виводять кінці обмоток з бака: високі — для 10 кВ, низькі — для 0,4 кВ</td>
+</tr>
+<tr>
+<td>розширювач</td>
+<td>бачок над баком, куди йде олія, коли нагрівається й розширюється</td>
+</tr>
+</tbody>
+</table>
+<p>Скільки витків на високій стороні? Напруги відносяться як витки:</p>
+<div class="formula">N<sub>ВН</sub> / N<sub>НН</sub> = U<sub>ВН</sub> / U<sub>НН</sub> = 10 000 / 400 = 25</div>
+<p>На високій стороні витків у 25 разів більше.</p>
+<div class="video" data-id="FwGQAKl0S8Y" data-start="912" data-public="2026-12-04T18:00:00+02:00"><button type="button" aria-label="Дивитися: Фізика 22 — лекція «Електромагнітні явища» — з 15:12: Взаємоіндукція і трансформатор"><img src="../img/fi_22_thumb-800.webp" width="1280" height="720" alt="" loading="lazy"><span class="play" aria-hidden="true"></span></button><p class="video-cap">▶ Фізика 22 — лекція «Електромагнітні явища» — з 15:12: Взаємоіндукція і трансформатор</p></div>
+<h2 id="navishcho-liniiam-elektroperedachi-vysoka-napruha">Навіщо лініям електропередачі висока напруга</h2>
+<p>Ту саму потужність P можна передати меншим струмом, якщо підняти напругу: I = P / U. А втрати на нагрівання проводів залежать від <strong>квадрата</strong> струму:</p>
+<div class="formula">ΔP = I² · R = (P / U)² · R</div>
+<p>Підняли напругу вдесятеро — струм упав удесятеро, а втрати — у сто разів.</p>
+<p><strong>Приклад.</strong> Передаємо 1 МВт лінією з опором проводів 10 Ом.</p>
+<table>
+<thead>
+<tr>
+<th>Напруга</th>
+<th>Струм I = P / U</th>
+<th>Втрати ΔP = I² · R</th>
+<th>Частка втрат</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10 кВ</td>
+<td>10⁶ / 10⁴ = 100 А</td>
+<td>100² · 10 = 100 кВт</td>
+<td>10 %</td>
+</tr>
+<tr>
+<td>100 кВ</td>
+<td>10⁶ / 10⁵ = 10 А</td>
+<td>10² · 10 = 1 кВт</td>
+<td>0,1 %</td>
+</tr>
+</tbody>
+</table>
+<p>Тому на електростанції підвищувальний трансформатор піднімає напругу до сотень кіловольтів, на підстанціях знижувальні опускають її поетапно, а до будинку приходять 230 вольтів.</p>
+<h2 id="samoinduktsiia-rodych-transformatora">Самоіндукція: родич трансформатора</h2>
+<p>Котушка наводить ЕРС не лише в сусідній котушці, а й <strong>у собі</strong>: струм створює потік крізь її ж витки, і коли струм змінюється — виникає ЕРС <strong>самоіндукції</strong>:</p>
+<div class="formula">ε = −L · ΔI / Δt</div>
+<p>L — індуктивність котушки, у генрі. Самоіндукція не дає струму ні швидко зрости, ні швидко зникнути.</p>
+<p><strong>Чому іскрить вимикач.</strong> Котушка з індуктивністю L = 2,5 Гн (з залізним осердям), струм I = 2 А, вимикач розриває коло за Δt = 1 мс:</p>
+<div class="formula">ε = L · ΔI / Δt = 2,5 · 2 / 0,001 = 5 000 В</div>
+<p>Близько п'яти тисяч вольтів на контактах вимикача — повітря між ними пробивається, і виникає дуга. Тому автомати в щитку мають дугогасні камери, а великі двигуни вмикають через плавні пускачі.</p>
+<figure><a href="../img/fi91_zapaliuvannia-1600.webp" target="_blank" rel="noopener"><img src="../img/fi91_zapaliuvannia-800.webp" srcset="../img/fi91_zapaliuvannia-800.webp 800w, ../img/fi91_zapaliuvannia-1600.webp 1600w" sizes="(max-width: 760px) 100vw, 720px" width="1600" height="900" alt="Котушка запалювання в розрізі: первинна і вторинна обмотки, ключ, свічка" loading="lazy" decoding="async"></a><figcaption>Котушка запалювання: самоіндукція дає кілька сотень вольтів на первинній, трансформація множить їх на 100. <span class="zoom">Натисни, щоб збільшити.</span></figcaption></figure>
+<p><strong>Котушка запалювання</strong> в автомобілі поєднує обидва ефекти. На осерді дві обмотки: первинна — близько 200 витків, вторинна — близько 20 000. Ключ різко обриває струм від акумулятора, і самоіндукція дає на первинній близько 300 В. Вторинна має витків у 20 000 / 200 = 100 разів більше, тож напруга на ній 300 · 100 = 30 000 В — досить, щоб пробити проміжок у свічці.</p>
+<h2 id="rozv-iazuiemo-zadachu">Розв'язуємо задачу</h2>
+<div class="task">
+<h3 id="transformator-dlia-lampy-12-v">Трансформатор для лампи 12 В</h3>
+<p>Первинна обмотка: U₁ = 230 В, N₁ = 1 150 витків. До вторинної підключено лампу 12 В потужністю P = 60 Вт. ККД трансформатора η = 0,95. Знайти кількість витків вторинної обмотки N₂, струм вторинної I₂ і струм первинної I₁.</p>
+<ol>
+<li>Витки: N₂ = N₁ · U₂ / U₁ = 1 150 · 12 / 230 = 60 витків. Коефіцієнт k = 12 / 230 ≈ 0,052 — знижувальний.</li>
+<li>Струм лампи: I₂ = P / U₂ = 60 / 12 = 5 А.</li>
+<li>Потужність, яку трансформатор бере з мережі, більша на втрати: P₁ = P / η = 60 / 0,95 ≈ 63,2 Вт.</li>
+<li>Струм первинної: I₁ = P₁ / U₁ = 63,2 / 230 ≈ 0,275 А.</li>
+<li>Перевірка: I₁ / I₂ ≈ 0,275 / 5 ≈ 0,055 — трохи більше, ніж N₂ / N₁ ≈ 0,052. Різниця — саме ті 5 % втрат.</li>
+</ol>
+<p><strong>Відповідь:</strong> N₂ = 60 витків; I₂ = 5 А; I₁ ≈ 0,275 А.</p>
+</div>
+<p><strong>Ще одна для самоперевірки.</strong> Первинна обмотка — 1 150 витків на 230 В. Скільки витків потрібно у вторинній, щоб живити інструмент від 36 В? <em>Відповідь:</em> 1 150 · 36 / 230 = 180 витків.</p>
+<div class="video" data-id="MtyqY32Asf8" data-start="1027" data-public="2026-12-05T18:00:00+02:00"><button type="button" aria-label="Дивитися: Фізика 22, практикум — 12 задач з розв&#x27;язанням — з 17:07: Задача 11. Трансформатор для лампи 12 В"><img src="../img/fi_22_p_thumb-800.webp" width="1280" height="720" alt="" loading="lazy"><span class="play" aria-hidden="true"></span></button><p class="video-cap">▶ Фізика 22, практикум — 12 задач з розв&#x27;язанням — з 17:07: Задача 11. Трансформатор для лампи 12 В</p></div>
+<h2 id="de-trapliaiutsia-transformatory">Де трапляються трансформатори</h2>
+<ul>
+<li>зарядні пристрої й блоки живлення — від телефона до ноутбука;</li>
+<li>зварювальні апарати: низька напруга й великий струм;</li>
+<li>прогрів бетону, ґрунту й труб узимку;</li>
+<li>живлення кранів, компресорів, бетонозмішувачів на будмайданчику;</li>
+<li>знижувальні трансформатори на 36 і 24 В для ручного інструменту й освітлення у вологих місцях;</li>
+<li>підстанції й електростанції.</li>
+</ul>
+<h2 id="korotko">Коротко</h2>
+<ul>
+<li>Трансформатор працює на взаємоіндукції і лише на змінному струмі.</li>
+<li>U₂ / U₁ = N₂ / N₁ = k: напруга більша там, де більше витків. Перевіряй, як означено k у твоєму підручнику.</li>
+<li>Ідеальний трансформатор: U₁ · I₁ = U₂ · I₂ — напруга вниз, струм угору.</li>
+<li>Осердя з тонких ізольованих листів — проти вихрових струмів; олія ізолює й охолоджує.</li>
+<li>Висока напруга в ЛЕП: втрати ∝ 1 / U², тож ×10 напруги — ÷100 втрат.</li>
+</ul>
+<p>Звідки береться сама ЕРС індукції — у статті <a href="../zakon-faradeia-pravylo-lentsa/">«Закон Фарадея і правило Ленца»</a>.</p>
+<aside class="cta">
+  <h2>Закріпити тему</h2>
+  <ul>
+    <li><a href="https://nikshev.github.io/student123/fizyka/fi22_trener/">🧮 Тренажер задач</a> — ті самі типи задач із новими числами, підказками й перевіркою.</li>
+    <li><a href="https://student123.page/">🎓 Курс «Фізика» на Student123</a> — усі лекції, конспекти й тести з поясненням помилок.</li>
+    <li><a href="https://t.me/student123_group">💬 Не виходить задача?</a> Спитай у чаті — розберемо.</li>
+  </ul>
+</aside>
+<section class="related"><h2>Читайте також</h2><ul><li><a href="../zakon-faradeia-pravylo-lentsa/">Закон Фарадея і правило Ленца: електромагнітна індукція простими словами</a></li><li><a href="../elektromahnitni-khvyli-rivniannia-maksvella/">Електромагнітні хвилі і рівняння Максвелла: чому світло, радіо і Wi-Fi — одне явище</a></li></ul></section>
+</main>
+<footer class="site"><div class="wrap">
+  <p><b>Student123</b> — фізика, електротехніка й математика для студентів і старшокласників: відео, конспекти, тести й тренажери задач.</p>
+  <p><a href="https://student123.page/">Курси й тести</a> · <a href="https://www.youtube.com/channel/UCfhb-P1E8HmisE7oJzFYPRw">YouTube</a> · <a href="https://t.me/student123_page">Telegram-канал</a> · <a href="https://t.me/student123_group">Чат для питань</a> · <a href="https://nikshev.github.io/student123/">Тренажери</a></p>
+</div></footer>
+<script>document.querySelectorAll('.video').forEach(function (box) {
+  var btn = box.querySelector('button');
+  var pub = new Date(box.dataset.public);
+  var months = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+  function waiting() { return Date.now() < pub.getTime(); }
+  if (waiting()) {
+    var s = document.createElement('span');
+    s.className = 'soon';
+    s.textContent = 'Відео вийде ' + pub.getDate() + ' ' + months[pub.getMonth()] + ' о ' +
+      String(pub.getHours()).padStart(2, '0') + ':' + String(pub.getMinutes()).padStart(2, '0') +
+      ' — натисни, щоб відкрити канал і не пропустити';
+    btn.appendChild(s);
+  }
+  btn.addEventListener('click', function () {
+    if (waiting()) { window.open('https://www.youtube.com/channel/UCfhb-P1E8HmisE7oJzFYPRw?sub_confirmation=1', '_blank', 'noopener'); return; }
+    var f = document.createElement('iframe');
+    f.src = 'https://www.youtube-nocookie.com/embed/' + box.dataset.id + '?autoplay=1&rel=0&start=' + box.dataset.start;
+    f.title = box.querySelector('.video-cap').textContent;
+    f.allow = 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture';
+    f.allowFullscreen = true;
+    btn.replaceWith(f);
+  });
+});
+</script>
+</body>
+</html>

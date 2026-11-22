@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Статті з фізики — Student123</title>
+<meta name="description" content="Фізика для студентів і старшокласників: пояснення тем з ілюстраціями, розв&#x27;язані задачі, відео й тренажери.">
+<link rel="canonical" href="https://nikshev.github.io/student123/blog/">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="uk_UA">
+<meta property="og:site_name" content="Student123">
+<meta property="og:title" content="Статті з фізики — Student123">
+<meta property="og:description" content="Фізика для студентів і старшокласників: пояснення тем з ілюстраціями, розв&#x27;язані задачі, відео й тренажери.">
+<meta property="og:url" content="https://nikshev.github.io/student123/blog/">
+<meta property="og:image" content="https://nikshev.github.io/student123/blog/img/fi88_ustanovka-og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0f1b33">
+<link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+<style>:root{--bg:#f6f7fb;--paper:#fff;--fg:#151a26;--muted:#596173;--line:#dfe3ec;--accent:#0b6bb0;--warm:#c85a17;--navy:#0f1b33;--formula:#eef3fb;--task:#fff7ef;--task-line:#f1c9a5;color-scheme:light dark}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1220;--paper:#141b2d;--fg:#e8ebf2;--muted:#a3abbd;--line:#273049;--accent:#62c4ef;--warm:#ff9a52;--formula:#18223a;--task:#1f1a17;--task-line:#5a3d27}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+a{color:var(--accent);text-underline-offset:3px}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+header.site{background:var(--navy);color:#fff}
+header.site .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;flex-wrap:wrap;max-width:1000px}
+header.site a{color:#fff;text-decoration:none}
+.brand{font-weight:700;font-size:19px;display:flex;align-items:center;gap:8px}
+.brand .dot{width:12px;height:12px;border-radius:50%;background:#ff8a3d;box-shadow:16px 0 0 #35c6e8;margin-right:16px}
+header.site nav{display:flex;gap:16px;font-size:15px}
+header.site nav a{opacity:.85}header.site nav a:hover{opacity:1;text-decoration:underline}
+.crumbs{font-size:14px;color:var(--muted);margin:22px 0 6px}
+.crumbs a{color:var(--muted)}
+h1{font-size:clamp(28px,6vw,40px);line-height:1.2;margin:8px 0 14px;letter-spacing:-.01em}
+h2{font-size:clamp(23px,4.6vw,28px);line-height:1.3;margin:44px 0 12px;padding-top:8px;border-top:1px solid var(--line)}
+h3{font-size:20px;margin:28px 0 8px}
+.lead{font-size:20px;color:var(--muted);margin:0 0 10px}
+.meta{font-size:14px;color:var(--muted);margin:0 0 20px}
+.toc{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 18px;margin:0 0 8px}
+.toc summary{font-weight:600;cursor:pointer}
+.toc ol{margin:8px 0 4px;padding-left:22px}.toc li{margin:3px 0}
+p,ul,ol{margin:0 0 16px}
+li{margin:4px 0}
+strong{font-weight:650}
+figure{margin:24px 0;}
+figure img{width:100%;height:auto;display:block;border-radius:12px;background:#121826}
+figcaption{font-size:15px;color:var(--muted);margin-top:8px;line-height:1.5}
+.formula{background:var(--formula);border-left:4px solid var(--accent);border-radius:8px;padding:14px 16px;margin:18px 0;white-space:pre-wrap;font:19px/1.7 "STIX Two Text","Cambria Math","Times New Roman",serif;overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:16px;display:block;overflow-x:auto}
+th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{font-weight:650;background:var(--paper)}
+code{font:0.92em ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--formula);padding:1px 5px;border-radius:5px}
+.task{background:var(--task);border:1px solid var(--task-line);border-radius:12px;padding:6px 18px 4px;margin:22px 0}
+.task h3{margin-top:14px}
+.task ol{padding-left:22px}
+.note{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--warm);border-radius:8px;padding:12px 16px;margin:20px 0}
+.note p:last-child{margin-bottom:0}
+.video{margin:24px 0}
+.video button{position:relative;display:block;width:100%;padding:0;border:0;border-radius:12px;overflow:hidden;cursor:pointer;background:#000}
+.video button img{width:100%;height:auto;display:block;opacity:.92}
+.video .play{position:absolute;left:50%;top:50%;width:76px;height:54px;margin:-27px 0 0 -38px;border-radius:14px;background:#e62117}
+.video .play::after{content:"";position:absolute;left:30px;top:16px;border-style:solid;border-width:11px 0 11px 19px;border-color:transparent transparent transparent #fff}
+.video iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:12px;display:block}
+.video-cap{font-size:15px;color:var(--muted);margin:8px 0 0}
+.video .soon{position:absolute;left:12px;right:12px;bottom:12px;background:rgba(10,14,26,.86);color:#fff;font-size:15px;padding:8px 12px;border-radius:8px;text-align:left}
+.cta{background:var(--navy);color:#e8ebf2;border-radius:14px;padding:4px 20px 8px;margin:44px 0 20px}
+.cta h2{border:0;margin-top:16px;color:#fff}
+.cta a{color:#7fd3f5}
+.cta ul{padding-left:4px;list-style:none}.cta li{margin:10px 0}
+.related h2{font-size:22px}
+.cards{list-style:none;padding:0;display:grid;gap:18px;margin:24px 0 40px}
+.cards a{display:block;background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden;text-decoration:none;color:var(--fg)}
+.cards img{width:100%;height:auto;display:block}
+.cards .t{display:block;font-weight:700;font-size:21px;line-height:1.3;padding:14px 16px 4px}
+.cards .d{display:block;color:var(--muted);font-size:16px;padding:0 16px 16px}
+footer.site{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 32px;font-size:15px;color:var(--muted)}
+footer.site a{color:var(--muted)}
+@media (min-width:760px){.cards{grid-template-columns:1fr 1fr}}
+figcaption .zoom{white-space:nowrap;opacity:.8}
+@media (max-width:600px){body{font-size:17px}.formula{font-size:16px;padding:12px 12px}.lead{font-size:18px}}
+@media (min-width:601px){figcaption .zoom{display:none}}
+</style>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "CollectionPage", "name": "Статті з фізики", "url": "https://nikshev.github.io/student123/blog/", "inLanguage": "uk"}</script>
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="brand" href="https://student123.page/"><span class="dot"></span>Student123</a>
+  <nav><a href="">Статті</a><a href="https://student123.page/">Курси й тести</a><a href="https://www.youtube.com/channel/UCfhb-P1E8HmisE7oJzFYPRw">YouTube</a></nav>
+</div></header>
+<main class="wrap index">
+<nav class="crumbs" aria-label="Навігація"><a href="https://student123.page/">Student123</a> › <span>Статті</span></nav>
+<h1>Статті з фізики</h1>
+<p class="lead">Пояснення тем курсу з розрізами реальних пристроїв, розв'язаними задачами й відео. Кожна стаття закінчується тренажером, де ті самі задачі — з новими числами.</p>
+<ul class="cards"><li><a href="zakon-faradeia-pravylo-lentsa/"><img src="img/fi88_ustanovka-800.webp" width="800" height="450" alt="" loading="lazy"><span class="t">Закон Фарадея і правило Ленца: електромагнітна індукція простими словами</span><span class="d">Що таке електромагнітна індукція, як рахувати ЕРС за законом Фарадея і як визначити напрям індукційного струму за правилом Ленца. З розв&#x27;язаними задачами.</span></a></li><li><a href="transformator-budova-pryntsyp-roboty/"><img src="img/fi92_rozriz-800.webp" width="800" height="450" alt="" loading="lazy"><span class="t">Трансформатор: будова, принцип роботи і коефіцієнт трансформації</span><span class="d">Як працює трансформатор: взаємоіндукція, формула U₂/U₁ = N₂/N₁, будова трансформатора підстанції в розрізі, розрахунок витків і струмів, навіщо ЛЕП висока напруга.</span></a></li><li><a href="elektromahnitni-khvyli-rivniannia-maksvella/"><img src="img/fi93_antena-800.webp" width="800" height="450" alt="" loading="lazy"><span class="t">Електромагнітні хвилі і рівняння Максвелла: чому світло, радіо і Wi-Fi — одне явище</span><span class="d">Що таке електромагнітна хвиля, як її випромінює антена, чотири рівняння Максвелла простими словами, розрахунок швидкості світла з двох сталих і довжини хвилі λ = c / f.</span></a></li></ul>
+</main>
+<footer class="site"><div class="wrap">
+  <p><b>Student123</b> — фізика, електротехніка й математика для студентів і старшокласників: відео, конспекти, тести й тренажери задач.</p>
+  <p><a href="https://student123.page/">Курси й тести</a> · <a href="https://www.youtube.com/channel/UCfhb-P1E8HmisE7oJzFYPRw">YouTube</a> · <a href="https://t.me/student123_page">Telegram-канал</a> · <a href="https://t.me/student123_group">Чат для питань</a> · <a href="https://nikshev.github.io/student123/">Тренажери</a></p>
+</div></footer>
+<script>document.querySelectorAll('.video').forEach(function (box) {
+  var btn = box.querySelector('button');
+  var pub = new Date(box.dataset.public);
+  var months = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+  function waiting() { return Date.now() < pub.getTime(); }
+  if (waiting()) {
+    var s = document.createElement('span');
+    s.className = 'soon';
+    s.textContent = 'Відео вийде ' + pub.getDate() + ' ' + months[pub.getMonth()] + ' о ' +
+      String(pub.getHours()).padStart(2, '0') + ':' + String(pub.getMinutes()).padStart(2, '0') +
+      ' — натисни, щоб відкрити канал і не пропустити';
+    btn.appendChild(s);
+  }
+  btn.addEventListener('click', function () {
+    if (waiting()) { window.open('https://www.youtube.com/channel/UCfhb-P1E8HmisE7oJzFYPRw?sub_confirmation=1', '_blank', 'noopener'); return; }
+    var f = document.createElement('iframe');
+    f.src = 'https://www.youtube-nocookie.com/embed/' + box.dataset.id + '?autoplay=1&rel=0&start=' + box.dataset.start;
+    f.title = box.querySelector('.video-cap').textContent;
+    f.allow = 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture';
+    f.allowFullscreen = true;
+    btn.replaceWith(f);
+  });
+});
+</script>
+</body>
+</html>
